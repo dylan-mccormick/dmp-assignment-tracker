@@ -1,0 +1,27 @@
+name: Redeploy stack (Compose Changed)
+
+on:
+    push:
+        branches: [main]
+        paths:
+            - 'docker-compose.yml'
+            - 'docker-compose.prod.yml'
+
+concurrency:
+    group: full-stack-deploy
+    cancel-in-progress: false
+
+jobs:
+    redeploy:
+        runs-on: ubuntu-latest
+        steps:
+            - name: Redeploy all services
+              uses: appleboy/ssh-action@v1
+              with:
+                  host: ${{ secrets.PROD_HOST }}
+                  username: ${{ secrets.PROD_USER }}
+                  key: ${{ secrets.PROD_SSH_KEY }}
+                  script: |
+                    cd ${{ secrets.PROD_COMPOSE_DIR }}
+                    docker compose --env-file .env.prod -f docker-compose.yml -f docker-compose.prod.yml pull
+                    docker compose --env-file .env.prod -f docker-compose.yml -f docker-compose.prod.yml up -d

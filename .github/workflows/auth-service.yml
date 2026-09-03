@@ -7,8 +7,6 @@ on:
             - 'services/auth/**'
             - 'proto/**'
             - '.github/workflows/auth-service.yml'
-            - 'docker-compose.prod.yml'
-            - 'docker-compose.yml'
 
 concurrency:
     group: auth-service-deploy

@@ -7,8 +7,6 @@ on:
             - 'services/stats/**'
             - 'proto/**'
             - '.github/workflows/stats-service.yml'
-            - 'docker-compose.prod.yml'
-            - 'docker-compose.yml'
 
 concurrency:
     group: stats-service-deploy

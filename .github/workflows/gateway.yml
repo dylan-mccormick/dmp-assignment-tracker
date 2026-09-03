@@ -7,8 +7,6 @@ on:
             - 'gateway/**'
             - 'proto/**'
             - '.github/workflows/gateway.yml'
-            - 'docker-compose.prod.yml'
-            - 'docker-compose.yml'
 
 concurrency:
     group: gateway-deploy

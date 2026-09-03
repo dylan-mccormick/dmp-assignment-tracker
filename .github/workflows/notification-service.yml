@@ -7,8 +7,6 @@ on:
             - 'services/notification/**'
             - 'proto/**'
             - '.github/workflows/notification-service.yml'
-            - 'docker-compose.prod.yml'
-            - 'docker-compose.yml'
 
 concurrency:
     group: notification-service-deploy

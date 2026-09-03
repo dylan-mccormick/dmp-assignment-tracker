@@ -7,8 +7,6 @@ on:
             - 'services/assignment/**'
             - 'proto/**'
             - '.github/workflows/assignment-service.yml'
-            - 'docker-compose.prod.yml'
-            - 'docker-compose.yml'
 
 concurrency:
     group: assignment-service-deploy
