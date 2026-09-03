@@ -1,0 +1,100 @@
+x-logging: &default-logging
+    driver: json-file
+    options:
+        max-size: 10m
+        max-file: 3
+
+services:
+    postgres-auth:
+        restart: unless-stopped
+        logging: *default-logging
+
+    postgres-assignment:
+        restart: unless-stopped
+        logging: *default-logging
+
+    redis:
+        restart: unless-stopped
+        logging: *default-logging
+        command: redis-server --appendonly yes # persist cache across restarts
+        volumes:
+            - redis_data:/data
+
+    rabbitmq:
+        image: rabbitmq:4-alpine
+        restart: unless-stopped
+        logging: *default-logging
+        volumes:
+            - rabbitmq_data:/var/lib/rabbitmq
+
+    gateway:
+        build:
+            target: prod
+        restart: unless-stopped
+        logging: *default-logging
+        environment:
+            NODE_ENV: production
+            JWT_SECRET: ${JWT_SECRET}
+            AUTH_SERVICE_URL: auth-service:50051
+            ASSIGNMENT_SERVICE_URL: assignment-service:50052
+            REDIS_URL: redis://redis:6379
+        ports:
+            - 15008:8080   # only service besides frontend exposed to the host
+
+    auth-service:
+        build:
+            target: prod
+        restart: unless-stopped
+        logging: *default-logging
+        environment:
+            NODE_ENV: production
+            DATABASE_URL: postgres://${AUTH_DB_USER}:${AUTH_DB_PASSWORD}@postgres-auth:5432/auth
+            REDIS_URL: redis://redis:6379
+            GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+            GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
+            JWT_SECRET: ${JWT_SECRET}
+
+    assignment-service:
+        build:
+            target: prod
+        restart: unless-stopped
+        logging: *default-logging
+        environment:
+            NODE_ENV: production
+            DATABASE_URL: postgres://${ASSIGNMENT_DB_USER}:${ASSIGNMENT_DB_PASSWORD}@postgres-assignment:5432/assignments
+            REDIS_URL: redis://redis:6379
+            RABBITMQ_URL: amqp://${RABBITMQ_USER}:${RABBITMQ_PASSWORD}@rabbitmq:5672
+
+    notification-service:
+        build:
+            target: prod
+        restart: unless-stopped
+        logging: *default-logging
+        environment:
+            NODE_ENV: production
+            RABBITMQ_URL: amqp://${RABBITMQ_USER}:${RABBITMQ_PASSWORD}@rabbitmq:5672
+
+    stats-service:
+        build:
+            target: prod
+        restart: unless-stopped
+        logging: *default-logging
+        environment:
+            NODE_ENV: production
+            REDIS_URL: redis://redis:6379
+            RABBITMQ_URL: amqp://${RABBITMQ_USER}:${RABBITMQ_PASSWORD}@rabbitmq:5672
+            ASSIGNMENT_SERVICE_URL: assignment-service:50052
+
+    frontend:
+        build:
+            target: prod
+        restart: unless-stopped
+        logging: *default-logging
+        environment:
+            VITE_API_BASE_URL: /api/v1
+        ports:
+            - 15007:80
+
+volumes:
+  redis_data:
+  rabbitmq_data:

@@ -1,0 +1,117 @@
+name: "DMP Assignment Tracker"
+
+services:
+
+    # infrastructure services
+
+    postgres-auth: # database for authorization/users
+        image: postgres:18-alpine
+        container_name: postgres-auth
+        environment:
+            POSTGRES_DB: auth
+            POSTGRES_USER: ${AUTH_DB_USER}
+            POSTGRES_PASSWORD: ${AUTH_DB_PASSWORD}
+        volumes:
+            - auth_db_data:/var/lib/postgresql/data
+        networks:
+            - backend_net
+
+    postgres-assignment: # database for domain objects (assignments, classes, semesters)
+        image: postgres:18-alpine
+        container_name: postgres-assignment
+        environment:
+            POSTGRES_DB: assignments
+            POSTGRES_USER: ${ASSIGNMENT_DB_USER}
+            POSTGRES_PASSWORD: ${ASSIGNMENT_DB_PASSWORD}
+        volumes:
+            - assignment_db_data:/var/lib/postgresql/data
+        networks:
+            - backend_net
+
+    redis: # redis cache
+        image: redis:8-alpine
+        container_name: redis
+        networks:
+            - backend_net
+
+    rabbitmq: # notification system
+        container_name: rabbitmq
+        environment:
+            RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER}
+            RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD}
+        networks:
+            - backend_net
+
+    # application services
+
+    gateway:
+        build:
+            context: ./gateway
+        container_name: gateway
+        depends_on:
+            - auth-service
+            - assignment-service
+            - redis
+        networks:
+            - backend_net
+            - frontend_net
+
+    frontend:
+        build:
+            context: ./frontend
+        container_name: frontend
+        depends_on:
+            - gateway
+        networks:
+            - frontend_net
+
+    # application services -> microservices
+
+    notification-service:
+        build:
+            context: ./services/notification
+        container_name: notification-service
+        depends_on:
+            - rabbitmq
+        networks:
+            - backend_net
+
+    auth-service:
+        build:
+            context: ./services/auth
+        container_name: auth-service
+        depends_on:
+            - postgres-auth
+            - redis
+        networks:
+            - backend_net
+
+    assignment-service:
+        build:
+            context: ./services/assignment
+        container_name: assignment-service
+        depends_on:
+            - postgres-assignment
+            - redis
+            - rabbitmq
+        networks:
+            - backend_net
+
+    stats-service:
+        build:
+            context: ./services/stats
+        container_name: stats-service
+        depends_on:
+            - redis
+            - rabbitmq
+            - assignment-service
+        networks:
+            - backend_net
+
+volumes:
+    assignment_db_data:
+    auth_db_data:
+
+networks:
+    frontend_net:
+    backend_net:
