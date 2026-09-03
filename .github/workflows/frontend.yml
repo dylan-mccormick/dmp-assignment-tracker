@@ -44,7 +44,7 @@ jobs:
             - name: Build and Push (Prod Target)
               uses: docker/build-push-action@v5
               with:
-                  context: .
+                  context: ./frontend
                   file: ./frontend/Dockerfile
                   target: prod
                   push: true
@@ -66,5 +66,5 @@ jobs:
                   key: ${{ secrets.PROD_SSH_KEY }}
                   script: |
                     cd ${{ secrets.PROD_COMPOSE_DIR }}
-                    docker compose --env-file .env.prod -f docker-compose.yml -f docker-compose.prod pull frontend
-                    docker compose --env-file .env.prod -f docker-compose.yml -f docker-compose.prod up -d frontend
+                    docker compose --env-file .env.prod -f docker-compose.yml -f docker-compose.prod.yml pull frontend
+                    docker compose --env-file .env.prod -f docker-compose.yml -f docker-compose.prod.yml up -d frontend
