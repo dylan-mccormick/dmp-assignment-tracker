@@ -12,7 +12,7 @@ services:
             POSTGRES_USER: ${AUTH_DB_USER}
             POSTGRES_PASSWORD: ${AUTH_DB_PASSWORD}
         volumes:
-            - auth_db_data:/var/lib/postgresql/data
+            - auth_db_data:/var/lib/postgresql
         networks:
             - backend_net
 
@@ -24,7 +24,7 @@ services:
             POSTGRES_USER: ${ASSIGNMENT_DB_USER}
             POSTGRES_PASSWORD: ${ASSIGNMENT_DB_PASSWORD}
         volumes:
-            - assignment_db_data:/var/lib/postgresql/data
+            - assignment_db_data:/var/lib/postgresql
         networks:
             - backend_net
 
