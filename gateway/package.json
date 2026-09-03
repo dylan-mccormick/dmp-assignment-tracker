@@ -1,0 +1,29 @@
+{
+    "name": "gateway",
+    "version": "1.0.0",
+    "description": "",
+    "keywords": [],
+    "license": "ISC",
+    "author": "",
+    "type": "module",
+    "main": "index.js",
+    "scripts": {
+        "start": "tsc; node dist/index.js",
+        "build": "tsc",
+        "dev": "nodemon -e js,ts,env --watch 'src/' --exec 'tsc; node dist/index.js'"
+    },
+    "devDependencies": {
+        "@types/node": "^26.4.1",
+        "nodemon": "^3.1.14",
+        "oxfmt": "^0.66.0",
+        "oxlint": "^1.79.0",
+        "typescript": "^7.0.2"
+    },
+    "devEngines": {
+        "packageManager": {
+            "name": "pnpm",
+            "version": "^11.10.0",
+            "onFail": "download"
+        }
+    }
+}

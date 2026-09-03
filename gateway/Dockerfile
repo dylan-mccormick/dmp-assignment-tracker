@@ -1,22 +1,24 @@
-FROM node:26-alpine AS base
+FROM ghcr.io/pnpm/pnpm:11 AS base
+RUN pnpm runtime set node 26 -g
 WORKDIR /app
+COPY pnpm-lock.yaml ./
 COPY package*.json ./
 
 # dev
 FROM base AS dev
-RUN npm install
+RUN pnpm install
 COPY . .
-CMD ["npm", "run", "dev"]
+CMD ["pnpm", "dev"]
 
 # build
 FROM base AS build
-RUN npm install
+RUN pnpm install
 COPY . .
-RUN npm run build
+RUN pnpm build
 
 # prod
 FROM base AS prod
-RUN npm install --omit=dev
+RUN pnpm install --prod
 COPY --from=build /app/dist ./dist
-EXPOSE 50052
-CMD ["node", "dist/main.js"]
+EXPOSE 8080
+CMD ["node", "dist/index.js"]
