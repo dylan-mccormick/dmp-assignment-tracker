@@ -8,7 +8,7 @@ COPY . .
 RUN npm run build
 
 # serve
-FROM nginx:alpine
+FROM nginx:alpine AS prod
 COPY ./nginx.conf /etc/nginx/conf.d/default.conf
 COPY --from=build ./dist /usr/share/nginx/html
 EXPOSE 3000
