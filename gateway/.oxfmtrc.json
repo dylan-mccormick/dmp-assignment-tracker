@@ -1,0 +1,10 @@
+{
+    "arrowParens": "avoid",
+    "bracketSameLine": true,
+    "jsdoc": true,
+    "printWidth": 120,
+    "singleAttributePerLine": true,
+    "sortImports": true,
+    "tabWidth": 4,
+    "trailingComma": "none"
+}
