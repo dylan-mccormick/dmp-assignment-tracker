@@ -28,8 +28,7 @@ services:
             - rabbitmq_data:/var/lib/rabbitmq
 
     gateway:
-        build:
-            target: prod
+        image: ghcr.io/dylan-mccormick/assignment-tracker-gateway:latest
         restart: unless-stopped
         logging: *default-logging
         environment:
@@ -42,8 +41,7 @@ services:
             - 15008:8080   # only service besides frontend exposed to the host
 
     auth-service:
-        build:
-            target: prod
+        image: ghcr.io/dylan-mccormick/auth-service:latest
         restart: unless-stopped
         logging: *default-logging
         environment:
@@ -55,8 +53,7 @@ services:
             JWT_SECRET: ${JWT_SECRET}
 
     assignment-service:
-        build:
-            target: prod
+        image: ghcr.io/dylan-mccormick/assignment-service:latest
         restart: unless-stopped
         logging: *default-logging
         environment:
@@ -66,8 +63,7 @@ services:
             RABBITMQ_URL: amqp://${RABBITMQ_USER}:${RABBITMQ_PASSWORD}@rabbitmq:5672
 
     notification-service:
-        build:
-            target: prod
+        image: ghcr.io/dylan-mccormick/notification-service:latest
         restart: unless-stopped
         logging: *default-logging
         environment:
@@ -75,8 +71,7 @@ services:
             RABBITMQ_URL: amqp://${RABBITMQ_USER}:${RABBITMQ_PASSWORD}@rabbitmq:5672
 
     stats-service:
-        build:
-            target: prod
+        image: ghcr.io/dylan-mccormick/stats-service:latest
         restart: unless-stopped
         logging: *default-logging
         environment:
@@ -86,8 +81,7 @@ services:
             ASSIGNMENT_SERVICE_URL: assignment-service:50052
 
     frontend:
-        build:
-            target: prod
+        image: ghcr.io/dylan-mccormick/assignment-tracker-frontend:latest
         restart: unless-stopped
         logging: *default-logging
         environment:
