@@ -13,7 +13,7 @@ interface ComposeProvidersProps {
 
 const ComposeProviders = ({ providers = [], children }: ComposeProvidersProps) => {
     return providers.reduceRight((acc, NextProvider) => {
-        return <NextProvider>{ acc }</NextProvider>
+        return <NextProvider>{acc}</NextProvider>;
     }, children);
 };
 
