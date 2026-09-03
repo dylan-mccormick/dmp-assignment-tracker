@@ -1,21 +1,21 @@
-name: Auth Service - Build and Deploy
+name: Gateway - Build and Deploy
 
 on:
     push:
         branches: [main]
         paths:
-            - 'services/auth/**'
+            - 'gateway/**'
             - 'proto/**'
-            - '.github/workflows/auth-service.yml'
+            - '.github/workflows/gateway.yml'
             - 'docker-compose.prod.yml'
             - 'docker-compose.yml'
 
 concurrency:
-    group: auth-service-deploy
+    group: gateway-deploy
     cancel-in-progress: false
 
 env:
-    IMAGE_NAME: ghcr.io/${{ github.repository_owner }}/auth-service
+    IMAGE_NAME: ghcr.io/${{ github.repository_owner }}/gateway
 
 jobs:
     build-and-push:
@@ -42,7 +42,7 @@ jobs:
               uses: docker/build-push-action@v5
               with:
                   context: .
-                  file: ./services/auth/Dockerfile
+                  file: ./gateway/Dockerfile
                   target: prod
                   push: true
                   tags: |

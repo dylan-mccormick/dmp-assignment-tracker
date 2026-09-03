@@ -1,21 +1,21 @@
-name: API Gateway - Build and Deploy
+name: Stats Service - Build and Deploy
 
 on:
     push:
         branches: [main]
         paths:
-            - 'gateway/**'
+            - 'services/stats/**'
             - 'proto/**'
-            - '.github/workflows/gateway.yml'
+            - '.github/workflows/stats-service.yml'
             - 'docker-compose.prod.yml'
             - 'docker-compose.yml'
 
 concurrency:
-    group: gateway-deploy
+    group: stats-service-deploy
     cancel-in-progress: false
 
 env:
-    IMAGE_NAME: ghcr.io/${{ github.repository_owner }}/assignment-tracker-gateway
+    IMAGE_NAME: ghcr.io/${{ github.repository_owner }}/stats-service
 
 jobs:
     build-and-push:
@@ -42,7 +42,7 @@ jobs:
               uses: docker/build-push-action@v5
               with:
                   context: .
-                  file: ./gateway/Dockerfile
+                  file: ./services/stats/Dockerfile
                   target: prod
                   push: true
                   tags: |
