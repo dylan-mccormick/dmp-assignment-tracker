@@ -23,6 +23,7 @@ services:
     gateway:
         build:
             target: dev
+            context: ./gateway
         environment:
             NODE_ENV: development
             JWT_SECRET: ${JWT_SECRET}
@@ -39,6 +40,7 @@ services:
     auth-service:
         build:
             target: dev
+            context: ./services/auth
         environment:
             NODE_ENV: development
             DATABASE_URL: postgres://${AUTH_DB_USER}:${AUTH_DB_PASSWORD}@postgres-auth:5432/auth
@@ -56,6 +58,7 @@ services:
     assignment-service:
         build:
             target: dev
+            context: ./services/assignment
         environment:
             NODE_ENV: development
             DATABASE_URL: postgres://${AUTH_DB_USER}:${AUTH_DB_PASSWORD}@postgres-auth:5432/auth
@@ -71,6 +74,7 @@ services:
     notification-service:
         build:
             target: dev
+            context: ./services/notification
         environment:
             NODE_ENV: development
             RABBITMQ_URL: amqp://${RABBITMQ_USER}:${RABBITMQ_PASSWORD}@rabbitmq:5672
@@ -82,6 +86,7 @@ services:
     stats-service:
         build:
             target: dev
+            context: ./services/stats
         environment:
             NODE_ENV: development
             REDIS_URL: redis://redis:6379
@@ -97,6 +102,7 @@ services:
     frontend:
         build:
             target: dev
+            context: ./frontend
         environment:
             VITE_API_BASE_URL: http://localhost:8080/api/v1
         volumes:

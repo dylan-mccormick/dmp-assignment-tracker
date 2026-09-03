@@ -45,8 +45,6 @@ services:
     # application services
 
     gateway:
-        build:
-            context: ./gateway
         container_name: gateway
         depends_on:
             - auth-service
@@ -57,8 +55,6 @@ services:
             - frontend_net
 
     frontend:
-        build:
-            context: ./frontend
         container_name: frontend
         depends_on:
             - gateway
@@ -68,8 +64,6 @@ services:
     # application services -> microservices
 
     notification-service:
-        build:
-            context: ./services/notification
         container_name: notification-service
         depends_on:
             - rabbitmq
@@ -77,8 +71,6 @@ services:
             - backend_net
 
     auth-service:
-        build:
-            context: ./services/auth
         container_name: auth-service
         depends_on:
             - postgres-auth
@@ -87,8 +79,6 @@ services:
             - backend_net
 
     assignment-service:
-        build:
-            context: ./services/assignment
         container_name: assignment-service
         depends_on:
             - postgres-assignment
@@ -98,8 +88,6 @@ services:
             - backend_net
 
     stats-service:
-        build:
-            context: ./services/stats
         container_name: stats-service
         depends_on:
             - redis
