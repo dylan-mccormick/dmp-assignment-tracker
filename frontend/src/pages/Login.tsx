@@ -2,9 +2,10 @@
 // A page to allow the user to sign in via Google
 
 import { GoogleLogin, hasGrantedAllScopesGoogle } from "@react-oauth/google";
-import StandardLayout from "../components/StandardLayout";
 import { useState } from "react";
 import { useNavigate } from "react-router";
+
+import StandardLayout from "../components/StandardLayout";
 
 const Login = () => {
     // Navigate
@@ -21,8 +22,7 @@ const Login = () => {
                 <div className="flex flex-col items-center justify-center h-full">
                     <h1 className="text-3xl font-extralight mb-8">Login</h1>
                     <GoogleLogin
-                        onSuccess={(response) => {
-
+                        onSuccess={response => {
                             // TODO: post to backend to get user info
 
                             navigate("/dashboard");
