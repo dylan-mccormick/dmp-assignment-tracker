@@ -1,18 +1,16 @@
 // App.tsx
 // Main entry point for the app
 
+import { GoogleOAuthProvider } from "@react-oauth/google";
 import { BrowserRouter, Route, Routes } from "react-router";
 
+import ComposeProviders from "./ComposeProviders";
 import Login from "./pages/Login";
 import PageNotFound from "./pages/PageNotFound";
-import ComposeProviders from "./ComposeProviders";
-import { GoogleOAuthProvider } from "@react-oauth/google";
 
 const App = () => {
     return (
-        <ComposeProviders providers={[
-
-        ]}>
+        <ComposeProviders providers={[]}>
             <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID}>
                 <BrowserRouter>
                     <Routes>
