@@ -6,12 +6,14 @@
         {
             "label": "Run Infrastructure",
             "type": "shell",
-            "command": "docker compose --env-file .env.dev -f docker-compose.yml -f docker-compose.dev.yml up --build"
+            "command": "docker compose --env-file .env.dev -f docker-compose.yml -f docker-compose.dev.yml up --build",
+            "problemMatcher": []
         },
         {
             "label": "Stop Infrastructure",
             "type": "shell",
-            "command": "docker compose --env-file .env.dev -f docker-compose.yml -f docker-compose.dev.yml down"
+            "command": "docker compose --env-file .env.dev -f docker-compose.yml -f docker-compose.dev.yml down",
+            "problemMatcher": []
         }
     ]
 }
