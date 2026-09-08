@@ -1,8 +1,8 @@
 FROM ghcr.io/pnpm/pnpm:11 AS base
 RUN pnpm runtime set node 26 -g
 WORKDIR /app
-COPY pnpm-lock.yaml ./
-COPY package*.json ./
+COPY services/gateway/pnpm-lock.yaml ./
+COPY services/gateway/package*.json ./
 
 # dev
 FROM base AS dev
