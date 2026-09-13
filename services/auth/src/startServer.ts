@@ -3,8 +3,6 @@
 
 import { Server } from "@grpc/grpc-js";
 
-const startServer = () => {
-
-};
+const startServer = () => {};
 
 export default startServer;

@@ -7,857 +7,869 @@
 /* eslint-disable */
 import { BinaryReader, BinaryWriter } from "@bufbuild/protobuf/wire";
 import {
-  type CallOptions,
-  type ChannelCredentials,
-  Client,
-  type ClientOptions,
-  type ClientUnaryCall,
-  type handleUnaryCall,
-  makeGenericClientConstructor,
-  type Metadata,
-  type ServiceError,
-  type UntypedServiceImplementation,
+    type CallOptions,
+    type ChannelCredentials,
+    Client,
+    type ClientOptions,
+    type ClientUnaryCall,
+    type handleUnaryCall,
+    makeGenericClientConstructor,
+    type Metadata,
+    type ServiceError,
+    type UntypedServiceImplementation
 } from "@grpc/grpc-js";
+
 import { Timestamp } from "./google/protobuf/timestamp";
 
 export const protobufPackage = "authentication";
 
 export interface User {
-  id: string;
-  googleId: string;
-  email: string;
-  name: string;
-  avatarUrl: string;
-  createdAt: Date | undefined;
-  updatedAt: Date | undefined;
-  deletedAt: Date | undefined;
+    id: string;
+    googleId: string;
+    email: string;
+    name: string;
+    avatarUrl: string;
+    createdAt: Date | undefined;
+    updatedAt: Date | undefined;
+    deletedAt: Date | undefined;
 }
 
 export interface SignInUserRequest {
-  googleAuthToken: string;
+    googleAuthToken: string;
 }
 
 export interface SignInUserResponse {
-  user: User | undefined;
-  created: boolean;
+    user: User | undefined;
+    created: boolean;
 }
 
 export interface SoftValidateJwtRequest {
-  jwt: string;
+    jwt: string;
 }
 
 export interface SoftValidateJwtResponse {
-  user: User | undefined;
-  valid: boolean;
+    user: User | undefined;
+    valid: boolean;
 }
 
 export interface DeleteUserRequest {
-  userId: string;
+    userId: string;
 }
 
 export interface DeleteUserResponse {
-  deleted: boolean;
+    deleted: boolean;
 }
 
 function createBaseUser(): User {
-  return {
-    id: "",
-    googleId: "",
-    email: "",
-    name: "",
-    avatarUrl: "",
-    createdAt: undefined,
-    updatedAt: undefined,
-    deletedAt: undefined,
-  };
+    return {
+        id: "",
+        googleId: "",
+        email: "",
+        name: "",
+        avatarUrl: "",
+        createdAt: undefined,
+        updatedAt: undefined,
+        deletedAt: undefined
+    };
 }
 
 export const User: MessageFns<User> = {
-  encode(message: User, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
-    if (message.id !== "") {
-      writer.uint32(10).string(message.id);
-    }
-    if (message.googleId !== "") {
-      writer.uint32(18).string(message.googleId);
-    }
-    if (message.email !== "") {
-      writer.uint32(26).string(message.email);
-    }
-    if (message.name !== "") {
-      writer.uint32(34).string(message.name);
-    }
-    if (message.avatarUrl !== "") {
-      writer.uint32(42).string(message.avatarUrl);
-    }
-    if (message.createdAt !== undefined) {
-      Timestamp.encode(toTimestamp(message.createdAt), writer.uint32(50).fork()).join();
-    }
-    if (message.updatedAt !== undefined) {
-      Timestamp.encode(toTimestamp(message.updatedAt), writer.uint32(58).fork()).join();
-    }
-    if (message.deletedAt !== undefined) {
-      Timestamp.encode(toTimestamp(message.deletedAt), writer.uint32(66).fork()).join();
-    }
-    return writer;
-  },
-
-  decode(input: BinaryReader | Uint8Array, length?: number): User {
-    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
-    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
-    if (previousRecursionDepth >= 100) {
-      throw new globalThis.Error("protobuf decode recursion limit exceeded");
-    }
-    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
-    try {
-      const end = length === undefined ? reader.len : reader.pos + length;
-      const message = createBaseUser();
-      while (reader.pos < end) {
-        const tag = reader.uint32();
-        switch (tag >>> 3) {
-          case 1: {
-            if (tag !== 10) {
-              break;
-            }
-
-            message.id = reader.string();
-            continue;
-          }
-          case 2: {
-            if (tag !== 18) {
-              break;
-            }
-
-            message.googleId = reader.string();
-            continue;
-          }
-          case 3: {
-            if (tag !== 26) {
-              break;
-            }
-
-            message.email = reader.string();
-            continue;
-          }
-          case 4: {
-            if (tag !== 34) {
-              break;
-            }
-
-            message.name = reader.string();
-            continue;
-          }
-          case 5: {
-            if (tag !== 42) {
-              break;
-            }
-
-            message.avatarUrl = reader.string();
-            continue;
-          }
-          case 6: {
-            if (tag !== 50) {
-              break;
-            }
-
-            message.createdAt = fromTimestamp(Timestamp.decode(reader, reader.uint32()));
-            continue;
-          }
-          case 7: {
-            if (tag !== 58) {
-              break;
-            }
-
-            message.updatedAt = fromTimestamp(Timestamp.decode(reader, reader.uint32()));
-            continue;
-          }
-          case 8: {
-            if (tag !== 66) {
-              break;
-            }
-
-            message.deletedAt = fromTimestamp(Timestamp.decode(reader, reader.uint32()));
-            continue;
-          }
+    encode(message: User, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+        if (message.id !== "") {
+            writer.uint32(10).string(message.id);
         }
-        if ((tag & 7) === 4 || tag === 0) {
-          break;
+        if (message.googleId !== "") {
+            writer.uint32(18).string(message.googleId);
         }
-        reader.skip(tag & 7);
-      }
-      return message;
-    } finally {
-      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
-    }
-  },
+        if (message.email !== "") {
+            writer.uint32(26).string(message.email);
+        }
+        if (message.name !== "") {
+            writer.uint32(34).string(message.name);
+        }
+        if (message.avatarUrl !== "") {
+            writer.uint32(42).string(message.avatarUrl);
+        }
+        if (message.createdAt !== undefined) {
+            Timestamp.encode(toTimestamp(message.createdAt), writer.uint32(50).fork()).join();
+        }
+        if (message.updatedAt !== undefined) {
+            Timestamp.encode(toTimestamp(message.updatedAt), writer.uint32(58).fork()).join();
+        }
+        if (message.deletedAt !== undefined) {
+            Timestamp.encode(toTimestamp(message.deletedAt), writer.uint32(66).fork()).join();
+        }
+        return writer;
+    },
 
-  fromJSON(object: any): User {
-    return {
-      id: isSet(object.id) ? globalThis.String(object.id) : "",
-      googleId: isSet(object.googleId)
-        ? globalThis.String(object.googleId)
-        : isSet(object.google_id)
-        ? globalThis.String(object.google_id)
-        : "",
-      email: isSet(object.email) ? globalThis.String(object.email) : "",
-      name: isSet(object.name) ? globalThis.String(object.name) : "",
-      avatarUrl: isSet(object.avatarUrl)
-        ? globalThis.String(object.avatarUrl)
-        : isSet(object.avatar_url)
-        ? globalThis.String(object.avatar_url)
-        : "",
-      createdAt: isSet(object.createdAt)
-        ? fromJsonTimestamp(object.createdAt)
-        : isSet(object.created_at)
-        ? fromJsonTimestamp(object.created_at)
-        : undefined,
-      updatedAt: isSet(object.updatedAt)
-        ? fromJsonTimestamp(object.updatedAt)
-        : isSet(object.updated_at)
-        ? fromJsonTimestamp(object.updated_at)
-        : undefined,
-      deletedAt: isSet(object.deletedAt)
-        ? fromJsonTimestamp(object.deletedAt)
-        : isSet(object.deleted_at)
-        ? fromJsonTimestamp(object.deleted_at)
-        : undefined,
-    };
-  },
+    decode(input: BinaryReader | Uint8Array, length?: number): User {
+        const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+        const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+        if (previousRecursionDepth >= 100) {
+            throw new globalThis.Error("protobuf decode recursion limit exceeded");
+        }
+        (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+        try {
+            const end = length === undefined ? reader.len : reader.pos + length;
+            const message = createBaseUser();
+            while (reader.pos < end) {
+                const tag = reader.uint32();
+                switch (tag >>> 3) {
+                    case 1: {
+                        if (tag !== 10) {
+                            break;
+                        }
 
-  toJSON(message: User): unknown {
-    const obj: any = {};
-    if (message.id !== "") {
-      obj.id = message.id;
-    }
-    if (message.googleId !== "") {
-      obj.googleId = message.googleId;
-    }
-    if (message.email !== "") {
-      obj.email = message.email;
-    }
-    if (message.name !== "") {
-      obj.name = message.name;
-    }
-    if (message.avatarUrl !== "") {
-      obj.avatarUrl = message.avatarUrl;
-    }
-    if (message.createdAt !== undefined) {
-      obj.createdAt = message.createdAt.toISOString();
-    }
-    if (message.updatedAt !== undefined) {
-      obj.updatedAt = message.updatedAt.toISOString();
-    }
-    if (message.deletedAt !== undefined) {
-      obj.deletedAt = message.deletedAt.toISOString();
-    }
-    return obj;
-  },
+                        message.id = reader.string();
+                        continue;
+                    }
+                    case 2: {
+                        if (tag !== 18) {
+                            break;
+                        }
 
-  create<I extends Exact<DeepPartial<User>, I>>(base?: I): User {
-    return User.fromPartial(base ?? ({} as any));
-  },
-  fromPartial<I extends Exact<DeepPartial<User>, I>>(object: I): User {
-    const message = createBaseUser();
-    message.id = object.id ?? "";
-    message.googleId = object.googleId ?? "";
-    message.email = object.email ?? "";
-    message.name = object.name ?? "";
-    message.avatarUrl = object.avatarUrl ?? "";
-    message.createdAt = object.createdAt ?? undefined;
-    message.updatedAt = object.updatedAt ?? undefined;
-    message.deletedAt = object.deletedAt ?? undefined;
-    return message;
-  },
+                        message.googleId = reader.string();
+                        continue;
+                    }
+                    case 3: {
+                        if (tag !== 26) {
+                            break;
+                        }
+
+                        message.email = reader.string();
+                        continue;
+                    }
+                    case 4: {
+                        if (tag !== 34) {
+                            break;
+                        }
+
+                        message.name = reader.string();
+                        continue;
+                    }
+                    case 5: {
+                        if (tag !== 42) {
+                            break;
+                        }
+
+                        message.avatarUrl = reader.string();
+                        continue;
+                    }
+                    case 6: {
+                        if (tag !== 50) {
+                            break;
+                        }
+
+                        message.createdAt = fromTimestamp(Timestamp.decode(reader, reader.uint32()));
+                        continue;
+                    }
+                    case 7: {
+                        if (tag !== 58) {
+                            break;
+                        }
+
+                        message.updatedAt = fromTimestamp(Timestamp.decode(reader, reader.uint32()));
+                        continue;
+                    }
+                    case 8: {
+                        if (tag !== 66) {
+                            break;
+                        }
+
+                        message.deletedAt = fromTimestamp(Timestamp.decode(reader, reader.uint32()));
+                        continue;
+                    }
+                }
+                if ((tag & 7) === 4 || tag === 0) {
+                    break;
+                }
+                reader.skip(tag & 7);
+            }
+            return message;
+        } finally {
+            (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+        }
+    },
+
+    fromJSON(object: any): User {
+        return {
+            id: isSet(object.id) ? globalThis.String(object.id) : "",
+            googleId: isSet(object.googleId)
+                ? globalThis.String(object.googleId)
+                : isSet(object.google_id)
+                  ? globalThis.String(object.google_id)
+                  : "",
+            email: isSet(object.email) ? globalThis.String(object.email) : "",
+            name: isSet(object.name) ? globalThis.String(object.name) : "",
+            avatarUrl: isSet(object.avatarUrl)
+                ? globalThis.String(object.avatarUrl)
+                : isSet(object.avatar_url)
+                  ? globalThis.String(object.avatar_url)
+                  : "",
+            createdAt: isSet(object.createdAt)
+                ? fromJsonTimestamp(object.createdAt)
+                : isSet(object.created_at)
+                  ? fromJsonTimestamp(object.created_at)
+                  : undefined,
+            updatedAt: isSet(object.updatedAt)
+                ? fromJsonTimestamp(object.updatedAt)
+                : isSet(object.updated_at)
+                  ? fromJsonTimestamp(object.updated_at)
+                  : undefined,
+            deletedAt: isSet(object.deletedAt)
+                ? fromJsonTimestamp(object.deletedAt)
+                : isSet(object.deleted_at)
+                  ? fromJsonTimestamp(object.deleted_at)
+                  : undefined
+        };
+    },
+
+    toJSON(message: User): unknown {
+        const obj: any = {};
+        if (message.id !== "") {
+            obj.id = message.id;
+        }
+        if (message.googleId !== "") {
+            obj.googleId = message.googleId;
+        }
+        if (message.email !== "") {
+            obj.email = message.email;
+        }
+        if (message.name !== "") {
+            obj.name = message.name;
+        }
+        if (message.avatarUrl !== "") {
+            obj.avatarUrl = message.avatarUrl;
+        }
+        if (message.createdAt !== undefined) {
+            obj.createdAt = message.createdAt.toISOString();
+        }
+        if (message.updatedAt !== undefined) {
+            obj.updatedAt = message.updatedAt.toISOString();
+        }
+        if (message.deletedAt !== undefined) {
+            obj.deletedAt = message.deletedAt.toISOString();
+        }
+        return obj;
+    },
+
+    create<I extends Exact<DeepPartial<User>, I>>(base?: I): User {
+        return User.fromPartial(base ?? ({} as any));
+    },
+    fromPartial<I extends Exact<DeepPartial<User>, I>>(object: I): User {
+        const message = createBaseUser();
+        message.id = object.id ?? "";
+        message.googleId = object.googleId ?? "";
+        message.email = object.email ?? "";
+        message.name = object.name ?? "";
+        message.avatarUrl = object.avatarUrl ?? "";
+        message.createdAt = object.createdAt ?? undefined;
+        message.updatedAt = object.updatedAt ?? undefined;
+        message.deletedAt = object.deletedAt ?? undefined;
+        return message;
+    }
 };
 
 function createBaseSignInUserRequest(): SignInUserRequest {
-  return { googleAuthToken: "" };
+    return { googleAuthToken: "" };
 }
 
 export const SignInUserRequest: MessageFns<SignInUserRequest> = {
-  encode(message: SignInUserRequest, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
-    if (message.googleAuthToken !== "") {
-      writer.uint32(10).string(message.googleAuthToken);
-    }
-    return writer;
-  },
+    encode(message: SignInUserRequest, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+        if (message.googleAuthToken !== "") {
+            writer.uint32(10).string(message.googleAuthToken);
+        }
+        return writer;
+    },
 
-  decode(input: BinaryReader | Uint8Array, length?: number): SignInUserRequest {
-    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
-    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
-    if (previousRecursionDepth >= 100) {
-      throw new globalThis.Error("protobuf decode recursion limit exceeded");
-    }
-    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
-    try {
-      const end = length === undefined ? reader.len : reader.pos + length;
-      const message = createBaseSignInUserRequest();
-      while (reader.pos < end) {
-        const tag = reader.uint32();
-        switch (tag >>> 3) {
-          case 1: {
-            if (tag !== 10) {
-              break;
+    decode(input: BinaryReader | Uint8Array, length?: number): SignInUserRequest {
+        const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+        const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+        if (previousRecursionDepth >= 100) {
+            throw new globalThis.Error("protobuf decode recursion limit exceeded");
+        }
+        (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+        try {
+            const end = length === undefined ? reader.len : reader.pos + length;
+            const message = createBaseSignInUserRequest();
+            while (reader.pos < end) {
+                const tag = reader.uint32();
+                switch (tag >>> 3) {
+                    case 1: {
+                        if (tag !== 10) {
+                            break;
+                        }
+
+                        message.googleAuthToken = reader.string();
+                        continue;
+                    }
+                }
+                if ((tag & 7) === 4 || tag === 0) {
+                    break;
+                }
+                reader.skip(tag & 7);
             }
-
-            message.googleAuthToken = reader.string();
-            continue;
-          }
+            return message;
+        } finally {
+            (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
         }
-        if ((tag & 7) === 4 || tag === 0) {
-          break;
+    },
+
+    fromJSON(object: any): SignInUserRequest {
+        return {
+            googleAuthToken: isSet(object.googleAuthToken)
+                ? globalThis.String(object.googleAuthToken)
+                : isSet(object.google_auth_token)
+                  ? globalThis.String(object.google_auth_token)
+                  : ""
+        };
+    },
+
+    toJSON(message: SignInUserRequest): unknown {
+        const obj: any = {};
+        if (message.googleAuthToken !== "") {
+            obj.googleAuthToken = message.googleAuthToken;
         }
-        reader.skip(tag & 7);
-      }
-      return message;
-    } finally {
-      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+        return obj;
+    },
+
+    create<I extends Exact<DeepPartial<SignInUserRequest>, I>>(base?: I): SignInUserRequest {
+        return SignInUserRequest.fromPartial(base ?? ({} as any));
+    },
+    fromPartial<I extends Exact<DeepPartial<SignInUserRequest>, I>>(object: I): SignInUserRequest {
+        const message = createBaseSignInUserRequest();
+        message.googleAuthToken = object.googleAuthToken ?? "";
+        return message;
     }
-  },
-
-  fromJSON(object: any): SignInUserRequest {
-    return {
-      googleAuthToken: isSet(object.googleAuthToken)
-        ? globalThis.String(object.googleAuthToken)
-        : isSet(object.google_auth_token)
-        ? globalThis.String(object.google_auth_token)
-        : "",
-    };
-  },
-
-  toJSON(message: SignInUserRequest): unknown {
-    const obj: any = {};
-    if (message.googleAuthToken !== "") {
-      obj.googleAuthToken = message.googleAuthToken;
-    }
-    return obj;
-  },
-
-  create<I extends Exact<DeepPartial<SignInUserRequest>, I>>(base?: I): SignInUserRequest {
-    return SignInUserRequest.fromPartial(base ?? ({} as any));
-  },
-  fromPartial<I extends Exact<DeepPartial<SignInUserRequest>, I>>(object: I): SignInUserRequest {
-    const message = createBaseSignInUserRequest();
-    message.googleAuthToken = object.googleAuthToken ?? "";
-    return message;
-  },
 };
 
 function createBaseSignInUserResponse(): SignInUserResponse {
-  return { user: undefined, created: false };
+    return { user: undefined, created: false };
 }
 
 export const SignInUserResponse: MessageFns<SignInUserResponse> = {
-  encode(message: SignInUserResponse, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
-    if (message.user !== undefined) {
-      User.encode(message.user, writer.uint32(10).fork()).join();
-    }
-    if (message.created !== false) {
-      writer.uint32(16).bool(message.created);
-    }
-    return writer;
-  },
-
-  decode(input: BinaryReader | Uint8Array, length?: number): SignInUserResponse {
-    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
-    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
-    if (previousRecursionDepth >= 100) {
-      throw new globalThis.Error("protobuf decode recursion limit exceeded");
-    }
-    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
-    try {
-      const end = length === undefined ? reader.len : reader.pos + length;
-      const message = createBaseSignInUserResponse();
-      while (reader.pos < end) {
-        const tag = reader.uint32();
-        switch (tag >>> 3) {
-          case 1: {
-            if (tag !== 10) {
-              break;
-            }
-
-            message.user = User.decode(reader, reader.uint32());
-            continue;
-          }
-          case 2: {
-            if (tag !== 16) {
-              break;
-            }
-
-            message.created = reader.bool();
-            continue;
-          }
+    encode(message: SignInUserResponse, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+        if (message.user !== undefined) {
+            User.encode(message.user, writer.uint32(10).fork()).join();
         }
-        if ((tag & 7) === 4 || tag === 0) {
-          break;
+        if (message.created !== false) {
+            writer.uint32(16).bool(message.created);
         }
-        reader.skip(tag & 7);
-      }
-      return message;
-    } finally {
-      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
-    }
-  },
+        return writer;
+    },
 
-  fromJSON(object: any): SignInUserResponse {
-    return {
-      user: isSet(object.user) ? User.fromJSON(object.user) : undefined,
-      created: isSet(object.created) ? globalThis.Boolean(object.created) : false,
-    };
-  },
+    decode(input: BinaryReader | Uint8Array, length?: number): SignInUserResponse {
+        const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+        const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+        if (previousRecursionDepth >= 100) {
+            throw new globalThis.Error("protobuf decode recursion limit exceeded");
+        }
+        (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+        try {
+            const end = length === undefined ? reader.len : reader.pos + length;
+            const message = createBaseSignInUserResponse();
+            while (reader.pos < end) {
+                const tag = reader.uint32();
+                switch (tag >>> 3) {
+                    case 1: {
+                        if (tag !== 10) {
+                            break;
+                        }
 
-  toJSON(message: SignInUserResponse): unknown {
-    const obj: any = {};
-    if (message.user !== undefined) {
-      obj.user = User.toJSON(message.user);
-    }
-    if (message.created !== false) {
-      obj.created = message.created;
-    }
-    return obj;
-  },
+                        message.user = User.decode(reader, reader.uint32());
+                        continue;
+                    }
+                    case 2: {
+                        if (tag !== 16) {
+                            break;
+                        }
 
-  create<I extends Exact<DeepPartial<SignInUserResponse>, I>>(base?: I): SignInUserResponse {
-    return SignInUserResponse.fromPartial(base ?? ({} as any));
-  },
-  fromPartial<I extends Exact<DeepPartial<SignInUserResponse>, I>>(object: I): SignInUserResponse {
-    const message = createBaseSignInUserResponse();
-    message.user = (object.user !== undefined && object.user !== null) ? User.fromPartial(object.user) : undefined;
-    message.created = object.created ?? false;
-    return message;
-  },
+                        message.created = reader.bool();
+                        continue;
+                    }
+                }
+                if ((tag & 7) === 4 || tag === 0) {
+                    break;
+                }
+                reader.skip(tag & 7);
+            }
+            return message;
+        } finally {
+            (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+        }
+    },
+
+    fromJSON(object: any): SignInUserResponse {
+        return {
+            user: isSet(object.user) ? User.fromJSON(object.user) : undefined,
+            created: isSet(object.created) ? globalThis.Boolean(object.created) : false
+        };
+    },
+
+    toJSON(message: SignInUserResponse): unknown {
+        const obj: any = {};
+        if (message.user !== undefined) {
+            obj.user = User.toJSON(message.user);
+        }
+        if (message.created !== false) {
+            obj.created = message.created;
+        }
+        return obj;
+    },
+
+    create<I extends Exact<DeepPartial<SignInUserResponse>, I>>(base?: I): SignInUserResponse {
+        return SignInUserResponse.fromPartial(base ?? ({} as any));
+    },
+    fromPartial<I extends Exact<DeepPartial<SignInUserResponse>, I>>(object: I): SignInUserResponse {
+        const message = createBaseSignInUserResponse();
+        message.user = object.user !== undefined && object.user !== null ? User.fromPartial(object.user) : undefined;
+        message.created = object.created ?? false;
+        return message;
+    }
 };
 
 function createBaseSoftValidateJwtRequest(): SoftValidateJwtRequest {
-  return { jwt: "" };
+    return { jwt: "" };
 }
 
 export const SoftValidateJwtRequest: MessageFns<SoftValidateJwtRequest> = {
-  encode(message: SoftValidateJwtRequest, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
-    if (message.jwt !== "") {
-      writer.uint32(10).string(message.jwt);
-    }
-    return writer;
-  },
+    encode(message: SoftValidateJwtRequest, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+        if (message.jwt !== "") {
+            writer.uint32(10).string(message.jwt);
+        }
+        return writer;
+    },
 
-  decode(input: BinaryReader | Uint8Array, length?: number): SoftValidateJwtRequest {
-    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
-    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
-    if (previousRecursionDepth >= 100) {
-      throw new globalThis.Error("protobuf decode recursion limit exceeded");
-    }
-    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
-    try {
-      const end = length === undefined ? reader.len : reader.pos + length;
-      const message = createBaseSoftValidateJwtRequest();
-      while (reader.pos < end) {
-        const tag = reader.uint32();
-        switch (tag >>> 3) {
-          case 1: {
-            if (tag !== 10) {
-              break;
+    decode(input: BinaryReader | Uint8Array, length?: number): SoftValidateJwtRequest {
+        const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+        const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+        if (previousRecursionDepth >= 100) {
+            throw new globalThis.Error("protobuf decode recursion limit exceeded");
+        }
+        (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+        try {
+            const end = length === undefined ? reader.len : reader.pos + length;
+            const message = createBaseSoftValidateJwtRequest();
+            while (reader.pos < end) {
+                const tag = reader.uint32();
+                switch (tag >>> 3) {
+                    case 1: {
+                        if (tag !== 10) {
+                            break;
+                        }
+
+                        message.jwt = reader.string();
+                        continue;
+                    }
+                }
+                if ((tag & 7) === 4 || tag === 0) {
+                    break;
+                }
+                reader.skip(tag & 7);
             }
-
-            message.jwt = reader.string();
-            continue;
-          }
+            return message;
+        } finally {
+            (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
         }
-        if ((tag & 7) === 4 || tag === 0) {
-          break;
+    },
+
+    fromJSON(object: any): SoftValidateJwtRequest {
+        return { jwt: isSet(object.jwt) ? globalThis.String(object.jwt) : "" };
+    },
+
+    toJSON(message: SoftValidateJwtRequest): unknown {
+        const obj: any = {};
+        if (message.jwt !== "") {
+            obj.jwt = message.jwt;
         }
-        reader.skip(tag & 7);
-      }
-      return message;
-    } finally {
-      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+        return obj;
+    },
+
+    create<I extends Exact<DeepPartial<SoftValidateJwtRequest>, I>>(base?: I): SoftValidateJwtRequest {
+        return SoftValidateJwtRequest.fromPartial(base ?? ({} as any));
+    },
+    fromPartial<I extends Exact<DeepPartial<SoftValidateJwtRequest>, I>>(object: I): SoftValidateJwtRequest {
+        const message = createBaseSoftValidateJwtRequest();
+        message.jwt = object.jwt ?? "";
+        return message;
     }
-  },
-
-  fromJSON(object: any): SoftValidateJwtRequest {
-    return { jwt: isSet(object.jwt) ? globalThis.String(object.jwt) : "" };
-  },
-
-  toJSON(message: SoftValidateJwtRequest): unknown {
-    const obj: any = {};
-    if (message.jwt !== "") {
-      obj.jwt = message.jwt;
-    }
-    return obj;
-  },
-
-  create<I extends Exact<DeepPartial<SoftValidateJwtRequest>, I>>(base?: I): SoftValidateJwtRequest {
-    return SoftValidateJwtRequest.fromPartial(base ?? ({} as any));
-  },
-  fromPartial<I extends Exact<DeepPartial<SoftValidateJwtRequest>, I>>(object: I): SoftValidateJwtRequest {
-    const message = createBaseSoftValidateJwtRequest();
-    message.jwt = object.jwt ?? "";
-    return message;
-  },
 };
 
 function createBaseSoftValidateJwtResponse(): SoftValidateJwtResponse {
-  return { user: undefined, valid: false };
+    return { user: undefined, valid: false };
 }
 
 export const SoftValidateJwtResponse: MessageFns<SoftValidateJwtResponse> = {
-  encode(message: SoftValidateJwtResponse, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
-    if (message.user !== undefined) {
-      User.encode(message.user, writer.uint32(10).fork()).join();
-    }
-    if (message.valid !== false) {
-      writer.uint32(16).bool(message.valid);
-    }
-    return writer;
-  },
-
-  decode(input: BinaryReader | Uint8Array, length?: number): SoftValidateJwtResponse {
-    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
-    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
-    if (previousRecursionDepth >= 100) {
-      throw new globalThis.Error("protobuf decode recursion limit exceeded");
-    }
-    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
-    try {
-      const end = length === undefined ? reader.len : reader.pos + length;
-      const message = createBaseSoftValidateJwtResponse();
-      while (reader.pos < end) {
-        const tag = reader.uint32();
-        switch (tag >>> 3) {
-          case 1: {
-            if (tag !== 10) {
-              break;
-            }
-
-            message.user = User.decode(reader, reader.uint32());
-            continue;
-          }
-          case 2: {
-            if (tag !== 16) {
-              break;
-            }
-
-            message.valid = reader.bool();
-            continue;
-          }
+    encode(message: SoftValidateJwtResponse, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+        if (message.user !== undefined) {
+            User.encode(message.user, writer.uint32(10).fork()).join();
         }
-        if ((tag & 7) === 4 || tag === 0) {
-          break;
+        if (message.valid !== false) {
+            writer.uint32(16).bool(message.valid);
         }
-        reader.skip(tag & 7);
-      }
-      return message;
-    } finally {
-      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
-    }
-  },
+        return writer;
+    },
 
-  fromJSON(object: any): SoftValidateJwtResponse {
-    return {
-      user: isSet(object.user) ? User.fromJSON(object.user) : undefined,
-      valid: isSet(object.valid) ? globalThis.Boolean(object.valid) : false,
-    };
-  },
+    decode(input: BinaryReader | Uint8Array, length?: number): SoftValidateJwtResponse {
+        const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+        const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+        if (previousRecursionDepth >= 100) {
+            throw new globalThis.Error("protobuf decode recursion limit exceeded");
+        }
+        (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+        try {
+            const end = length === undefined ? reader.len : reader.pos + length;
+            const message = createBaseSoftValidateJwtResponse();
+            while (reader.pos < end) {
+                const tag = reader.uint32();
+                switch (tag >>> 3) {
+                    case 1: {
+                        if (tag !== 10) {
+                            break;
+                        }
 
-  toJSON(message: SoftValidateJwtResponse): unknown {
-    const obj: any = {};
-    if (message.user !== undefined) {
-      obj.user = User.toJSON(message.user);
-    }
-    if (message.valid !== false) {
-      obj.valid = message.valid;
-    }
-    return obj;
-  },
+                        message.user = User.decode(reader, reader.uint32());
+                        continue;
+                    }
+                    case 2: {
+                        if (tag !== 16) {
+                            break;
+                        }
 
-  create<I extends Exact<DeepPartial<SoftValidateJwtResponse>, I>>(base?: I): SoftValidateJwtResponse {
-    return SoftValidateJwtResponse.fromPartial(base ?? ({} as any));
-  },
-  fromPartial<I extends Exact<DeepPartial<SoftValidateJwtResponse>, I>>(object: I): SoftValidateJwtResponse {
-    const message = createBaseSoftValidateJwtResponse();
-    message.user = (object.user !== undefined && object.user !== null) ? User.fromPartial(object.user) : undefined;
-    message.valid = object.valid ?? false;
-    return message;
-  },
+                        message.valid = reader.bool();
+                        continue;
+                    }
+                }
+                if ((tag & 7) === 4 || tag === 0) {
+                    break;
+                }
+                reader.skip(tag & 7);
+            }
+            return message;
+        } finally {
+            (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+        }
+    },
+
+    fromJSON(object: any): SoftValidateJwtResponse {
+        return {
+            user: isSet(object.user) ? User.fromJSON(object.user) : undefined,
+            valid: isSet(object.valid) ? globalThis.Boolean(object.valid) : false
+        };
+    },
+
+    toJSON(message: SoftValidateJwtResponse): unknown {
+        const obj: any = {};
+        if (message.user !== undefined) {
+            obj.user = User.toJSON(message.user);
+        }
+        if (message.valid !== false) {
+            obj.valid = message.valid;
+        }
+        return obj;
+    },
+
+    create<I extends Exact<DeepPartial<SoftValidateJwtResponse>, I>>(base?: I): SoftValidateJwtResponse {
+        return SoftValidateJwtResponse.fromPartial(base ?? ({} as any));
+    },
+    fromPartial<I extends Exact<DeepPartial<SoftValidateJwtResponse>, I>>(object: I): SoftValidateJwtResponse {
+        const message = createBaseSoftValidateJwtResponse();
+        message.user = object.user !== undefined && object.user !== null ? User.fromPartial(object.user) : undefined;
+        message.valid = object.valid ?? false;
+        return message;
+    }
 };
 
 function createBaseDeleteUserRequest(): DeleteUserRequest {
-  return { userId: "" };
+    return { userId: "" };
 }
 
 export const DeleteUserRequest: MessageFns<DeleteUserRequest> = {
-  encode(message: DeleteUserRequest, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
-    if (message.userId !== "") {
-      writer.uint32(10).string(message.userId);
-    }
-    return writer;
-  },
+    encode(message: DeleteUserRequest, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+        if (message.userId !== "") {
+            writer.uint32(10).string(message.userId);
+        }
+        return writer;
+    },
 
-  decode(input: BinaryReader | Uint8Array, length?: number): DeleteUserRequest {
-    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
-    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
-    if (previousRecursionDepth >= 100) {
-      throw new globalThis.Error("protobuf decode recursion limit exceeded");
-    }
-    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
-    try {
-      const end = length === undefined ? reader.len : reader.pos + length;
-      const message = createBaseDeleteUserRequest();
-      while (reader.pos < end) {
-        const tag = reader.uint32();
-        switch (tag >>> 3) {
-          case 1: {
-            if (tag !== 10) {
-              break;
+    decode(input: BinaryReader | Uint8Array, length?: number): DeleteUserRequest {
+        const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+        const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+        if (previousRecursionDepth >= 100) {
+            throw new globalThis.Error("protobuf decode recursion limit exceeded");
+        }
+        (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+        try {
+            const end = length === undefined ? reader.len : reader.pos + length;
+            const message = createBaseDeleteUserRequest();
+            while (reader.pos < end) {
+                const tag = reader.uint32();
+                switch (tag >>> 3) {
+                    case 1: {
+                        if (tag !== 10) {
+                            break;
+                        }
+
+                        message.userId = reader.string();
+                        continue;
+                    }
+                }
+                if ((tag & 7) === 4 || tag === 0) {
+                    break;
+                }
+                reader.skip(tag & 7);
             }
-
-            message.userId = reader.string();
-            continue;
-          }
+            return message;
+        } finally {
+            (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
         }
-        if ((tag & 7) === 4 || tag === 0) {
-          break;
+    },
+
+    fromJSON(object: any): DeleteUserRequest {
+        return {
+            userId: isSet(object.userId)
+                ? globalThis.String(object.userId)
+                : isSet(object.user_id)
+                  ? globalThis.String(object.user_id)
+                  : ""
+        };
+    },
+
+    toJSON(message: DeleteUserRequest): unknown {
+        const obj: any = {};
+        if (message.userId !== "") {
+            obj.userId = message.userId;
         }
-        reader.skip(tag & 7);
-      }
-      return message;
-    } finally {
-      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+        return obj;
+    },
+
+    create<I extends Exact<DeepPartial<DeleteUserRequest>, I>>(base?: I): DeleteUserRequest {
+        return DeleteUserRequest.fromPartial(base ?? ({} as any));
+    },
+    fromPartial<I extends Exact<DeepPartial<DeleteUserRequest>, I>>(object: I): DeleteUserRequest {
+        const message = createBaseDeleteUserRequest();
+        message.userId = object.userId ?? "";
+        return message;
     }
-  },
-
-  fromJSON(object: any): DeleteUserRequest {
-    return {
-      userId: isSet(object.userId)
-        ? globalThis.String(object.userId)
-        : isSet(object.user_id)
-        ? globalThis.String(object.user_id)
-        : "",
-    };
-  },
-
-  toJSON(message: DeleteUserRequest): unknown {
-    const obj: any = {};
-    if (message.userId !== "") {
-      obj.userId = message.userId;
-    }
-    return obj;
-  },
-
-  create<I extends Exact<DeepPartial<DeleteUserRequest>, I>>(base?: I): DeleteUserRequest {
-    return DeleteUserRequest.fromPartial(base ?? ({} as any));
-  },
-  fromPartial<I extends Exact<DeepPartial<DeleteUserRequest>, I>>(object: I): DeleteUserRequest {
-    const message = createBaseDeleteUserRequest();
-    message.userId = object.userId ?? "";
-    return message;
-  },
 };
 
 function createBaseDeleteUserResponse(): DeleteUserResponse {
-  return { deleted: false };
+    return { deleted: false };
 }
 
 export const DeleteUserResponse: MessageFns<DeleteUserResponse> = {
-  encode(message: DeleteUserResponse, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
-    if (message.deleted !== false) {
-      writer.uint32(8).bool(message.deleted);
-    }
-    return writer;
-  },
+    encode(message: DeleteUserResponse, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+        if (message.deleted !== false) {
+            writer.uint32(8).bool(message.deleted);
+        }
+        return writer;
+    },
 
-  decode(input: BinaryReader | Uint8Array, length?: number): DeleteUserResponse {
-    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
-    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
-    if (previousRecursionDepth >= 100) {
-      throw new globalThis.Error("protobuf decode recursion limit exceeded");
-    }
-    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
-    try {
-      const end = length === undefined ? reader.len : reader.pos + length;
-      const message = createBaseDeleteUserResponse();
-      while (reader.pos < end) {
-        const tag = reader.uint32();
-        switch (tag >>> 3) {
-          case 1: {
-            if (tag !== 8) {
-              break;
+    decode(input: BinaryReader | Uint8Array, length?: number): DeleteUserResponse {
+        const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+        const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+        if (previousRecursionDepth >= 100) {
+            throw new globalThis.Error("protobuf decode recursion limit exceeded");
+        }
+        (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+        try {
+            const end = length === undefined ? reader.len : reader.pos + length;
+            const message = createBaseDeleteUserResponse();
+            while (reader.pos < end) {
+                const tag = reader.uint32();
+                switch (tag >>> 3) {
+                    case 1: {
+                        if (tag !== 8) {
+                            break;
+                        }
+
+                        message.deleted = reader.bool();
+                        continue;
+                    }
+                }
+                if ((tag & 7) === 4 || tag === 0) {
+                    break;
+                }
+                reader.skip(tag & 7);
             }
-
-            message.deleted = reader.bool();
-            continue;
-          }
+            return message;
+        } finally {
+            (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
         }
-        if ((tag & 7) === 4 || tag === 0) {
-          break;
+    },
+
+    fromJSON(object: any): DeleteUserResponse {
+        return { deleted: isSet(object.deleted) ? globalThis.Boolean(object.deleted) : false };
+    },
+
+    toJSON(message: DeleteUserResponse): unknown {
+        const obj: any = {};
+        if (message.deleted !== false) {
+            obj.deleted = message.deleted;
         }
-        reader.skip(tag & 7);
-      }
-      return message;
-    } finally {
-      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+        return obj;
+    },
+
+    create<I extends Exact<DeepPartial<DeleteUserResponse>, I>>(base?: I): DeleteUserResponse {
+        return DeleteUserResponse.fromPartial(base ?? ({} as any));
+    },
+    fromPartial<I extends Exact<DeepPartial<DeleteUserResponse>, I>>(object: I): DeleteUserResponse {
+        const message = createBaseDeleteUserResponse();
+        message.deleted = object.deleted ?? false;
+        return message;
     }
-  },
-
-  fromJSON(object: any): DeleteUserResponse {
-    return { deleted: isSet(object.deleted) ? globalThis.Boolean(object.deleted) : false };
-  },
-
-  toJSON(message: DeleteUserResponse): unknown {
-    const obj: any = {};
-    if (message.deleted !== false) {
-      obj.deleted = message.deleted;
-    }
-    return obj;
-  },
-
-  create<I extends Exact<DeepPartial<DeleteUserResponse>, I>>(base?: I): DeleteUserResponse {
-    return DeleteUserResponse.fromPartial(base ?? ({} as any));
-  },
-  fromPartial<I extends Exact<DeepPartial<DeleteUserResponse>, I>>(object: I): DeleteUserResponse {
-    const message = createBaseDeleteUserResponse();
-    message.deleted = object.deleted ?? false;
-    return message;
-  },
 };
 
 export type AuthenticationServiceService = typeof AuthenticationServiceService;
 export const AuthenticationServiceService = {
-  signInUser: {
-    path: "/authentication.AuthenticationService/SignInUser" as const,
-    requestStream: false as const,
-    responseStream: false as const,
-    requestSerialize: (value: SignInUserRequest): Buffer => Buffer.from(SignInUserRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): SignInUserRequest => SignInUserRequest.decode(value),
-    responseSerialize: (value: SignInUserResponse): Buffer => Buffer.from(SignInUserResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): SignInUserResponse => SignInUserResponse.decode(value),
-  },
-  softValidateJwt: {
-    path: "/authentication.AuthenticationService/SoftValidateJwt" as const,
-    requestStream: false as const,
-    responseStream: false as const,
-    requestSerialize: (value: SoftValidateJwtRequest): Buffer =>
-      Buffer.from(SoftValidateJwtRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): SoftValidateJwtRequest => SoftValidateJwtRequest.decode(value),
-    responseSerialize: (value: SoftValidateJwtResponse): Buffer =>
-      Buffer.from(SoftValidateJwtResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): SoftValidateJwtResponse => SoftValidateJwtResponse.decode(value),
-  },
-  deleteUser: {
-    path: "/authentication.AuthenticationService/DeleteUser" as const,
-    requestStream: false as const,
-    responseStream: false as const,
-    requestSerialize: (value: DeleteUserRequest): Buffer => Buffer.from(DeleteUserRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): DeleteUserRequest => DeleteUserRequest.decode(value),
-    responseSerialize: (value: DeleteUserResponse): Buffer => Buffer.from(DeleteUserResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): DeleteUserResponse => DeleteUserResponse.decode(value),
-  },
+    signInUser: {
+        path: "/authentication.AuthenticationService/SignInUser" as const,
+        requestStream: false as const,
+        responseStream: false as const,
+        requestSerialize: (value: SignInUserRequest): Buffer => Buffer.from(SignInUserRequest.encode(value).finish()),
+        requestDeserialize: (value: Buffer): SignInUserRequest => SignInUserRequest.decode(value),
+        responseSerialize: (value: SignInUserResponse): Buffer =>
+            Buffer.from(SignInUserResponse.encode(value).finish()),
+        responseDeserialize: (value: Buffer): SignInUserResponse => SignInUserResponse.decode(value)
+    },
+    softValidateJwt: {
+        path: "/authentication.AuthenticationService/SoftValidateJwt" as const,
+        requestStream: false as const,
+        responseStream: false as const,
+        requestSerialize: (value: SoftValidateJwtRequest): Buffer =>
+            Buffer.from(SoftValidateJwtRequest.encode(value).finish()),
+        requestDeserialize: (value: Buffer): SoftValidateJwtRequest => SoftValidateJwtRequest.decode(value),
+        responseSerialize: (value: SoftValidateJwtResponse): Buffer =>
+            Buffer.from(SoftValidateJwtResponse.encode(value).finish()),
+        responseDeserialize: (value: Buffer): SoftValidateJwtResponse => SoftValidateJwtResponse.decode(value)
+    },
+    deleteUser: {
+        path: "/authentication.AuthenticationService/DeleteUser" as const,
+        requestStream: false as const,
+        responseStream: false as const,
+        requestSerialize: (value: DeleteUserRequest): Buffer => Buffer.from(DeleteUserRequest.encode(value).finish()),
+        requestDeserialize: (value: Buffer): DeleteUserRequest => DeleteUserRequest.decode(value),
+        responseSerialize: (value: DeleteUserResponse): Buffer =>
+            Buffer.from(DeleteUserResponse.encode(value).finish()),
+        responseDeserialize: (value: Buffer): DeleteUserResponse => DeleteUserResponse.decode(value)
+    }
 } as const;
 
 export interface AuthenticationServiceServer extends UntypedServiceImplementation {
-  signInUser: handleUnaryCall<SignInUserRequest, SignInUserResponse>;
-  softValidateJwt: handleUnaryCall<SoftValidateJwtRequest, SoftValidateJwtResponse>;
-  deleteUser: handleUnaryCall<DeleteUserRequest, DeleteUserResponse>;
+    signInUser: handleUnaryCall<SignInUserRequest, SignInUserResponse>;
+    softValidateJwt: handleUnaryCall<SoftValidateJwtRequest, SoftValidateJwtResponse>;
+    deleteUser: handleUnaryCall<DeleteUserRequest, DeleteUserResponse>;
 }
 
 export interface AuthenticationServiceClient extends Client {
-  signInUser(
-    request: SignInUserRequest,
-    callback: (error: ServiceError | null, response: SignInUserResponse) => void,
-  ): ClientUnaryCall;
-  signInUser(
-    request: SignInUserRequest,
-    metadata: Metadata,
-    callback: (error: ServiceError | null, response: SignInUserResponse) => void,
-  ): ClientUnaryCall;
-  signInUser(
-    request: SignInUserRequest,
-    metadata: Metadata,
-    options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: SignInUserResponse) => void,
-  ): ClientUnaryCall;
-  softValidateJwt(
-    request: SoftValidateJwtRequest,
-    callback: (error: ServiceError | null, response: SoftValidateJwtResponse) => void,
-  ): ClientUnaryCall;
-  softValidateJwt(
-    request: SoftValidateJwtRequest,
-    metadata: Metadata,
-    callback: (error: ServiceError | null, response: SoftValidateJwtResponse) => void,
-  ): ClientUnaryCall;
-  softValidateJwt(
-    request: SoftValidateJwtRequest,
-    metadata: Metadata,
-    options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: SoftValidateJwtResponse) => void,
-  ): ClientUnaryCall;
-  deleteUser(
-    request: DeleteUserRequest,
-    callback: (error: ServiceError | null, response: DeleteUserResponse) => void,
-  ): ClientUnaryCall;
-  deleteUser(
-    request: DeleteUserRequest,
-    metadata: Metadata,
-    callback: (error: ServiceError | null, response: DeleteUserResponse) => void,
-  ): ClientUnaryCall;
-  deleteUser(
-    request: DeleteUserRequest,
-    metadata: Metadata,
-    options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: DeleteUserResponse) => void,
-  ): ClientUnaryCall;
+    signInUser(
+        request: SignInUserRequest,
+        callback: (error: ServiceError | null, response: SignInUserResponse) => void
+    ): ClientUnaryCall;
+    signInUser(
+        request: SignInUserRequest,
+        metadata: Metadata,
+        callback: (error: ServiceError | null, response: SignInUserResponse) => void
+    ): ClientUnaryCall;
+    signInUser(
+        request: SignInUserRequest,
+        metadata: Metadata,
+        options: Partial<CallOptions>,
+        callback: (error: ServiceError | null, response: SignInUserResponse) => void
+    ): ClientUnaryCall;
+    softValidateJwt(
+        request: SoftValidateJwtRequest,
+        callback: (error: ServiceError | null, response: SoftValidateJwtResponse) => void
+    ): ClientUnaryCall;
+    softValidateJwt(
+        request: SoftValidateJwtRequest,
+        metadata: Metadata,
+        callback: (error: ServiceError | null, response: SoftValidateJwtResponse) => void
+    ): ClientUnaryCall;
+    softValidateJwt(
+        request: SoftValidateJwtRequest,
+        metadata: Metadata,
+        options: Partial<CallOptions>,
+        callback: (error: ServiceError | null, response: SoftValidateJwtResponse) => void
+    ): ClientUnaryCall;
+    deleteUser(
+        request: DeleteUserRequest,
+        callback: (error: ServiceError | null, response: DeleteUserResponse) => void
+    ): ClientUnaryCall;
+    deleteUser(
+        request: DeleteUserRequest,
+        metadata: Metadata,
+        callback: (error: ServiceError | null, response: DeleteUserResponse) => void
+    ): ClientUnaryCall;
+    deleteUser(
+        request: DeleteUserRequest,
+        metadata: Metadata,
+        options: Partial<CallOptions>,
+        callback: (error: ServiceError | null, response: DeleteUserResponse) => void
+    ): ClientUnaryCall;
 }
 
 export const AuthenticationServiceClient = makeGenericClientConstructor(
-  AuthenticationServiceService,
-  "authentication.AuthenticationService",
+    AuthenticationServiceService,
+    "authentication.AuthenticationService"
 ) as unknown as {
-  new (address: string, credentials: ChannelCredentials, options?: Partial<ClientOptions>): AuthenticationServiceClient;
-  service: typeof AuthenticationServiceService;
-  serviceName: string;
+    new (
+        address: string,
+        credentials: ChannelCredentials,
+        options?: Partial<ClientOptions>
+    ): AuthenticationServiceClient;
+    service: typeof AuthenticationServiceService;
+    serviceName: string;
 };
 
 type Builtin = Date | Function | Uint8Array | string | number | boolean | undefined;
 
-export type DeepPartial<T> = T extends Builtin ? T
-  : T extends globalThis.Array<infer U> ? globalThis.Array<DeepPartial<U>>
-  : T extends ReadonlyArray<infer U> ? ReadonlyArray<DeepPartial<U>>
-  : T extends {} ? { [K in keyof T]?: DeepPartial<T[K]> }
-  : Partial<T>;
+export type DeepPartial<T> = T extends Builtin
+    ? T
+    : T extends globalThis.Array<infer U>
+      ? globalThis.Array<DeepPartial<U>>
+      : T extends ReadonlyArray<infer U>
+        ? ReadonlyArray<DeepPartial<U>>
+        : T extends {}
+          ? { [K in keyof T]?: DeepPartial<T[K]> }
+          : Partial<T>;
 
 type KeysOfUnion<T> = T extends T ? keyof T : never;
-export type Exact<P, I extends P> = P extends Builtin ? P
-  : P & { [K in keyof P]: Exact<P[K], I[K]> } & { [K in Exclude<keyof I, KeysOfUnion<P>>]: never };
+export type Exact<P, I extends P> = P extends Builtin
+    ? P
+    : P & { [K in keyof P]: Exact<P[K], I[K]> } & { [K in Exclude<keyof I, KeysOfUnion<P>>]: never };
 
 function toTimestamp(date: Date): Timestamp {
-  const seconds = Math.trunc(date.getTime() / 1_000);
-  const nanos = (date.getTime() % 1_000) * 1_000_000;
-  return { seconds, nanos };
+    const seconds = Math.trunc(date.getTime() / 1_000);
+    const nanos = (date.getTime() % 1_000) * 1_000_000;
+    return { seconds, nanos };
 }
 
 function fromTimestamp(t: Timestamp): Date {
-  let millis = (t.seconds || 0) * 1_000;
-  millis += (t.nanos || 0) / 1_000_000;
-  return new globalThis.Date(millis);
+    let millis = (t.seconds || 0) * 1_000;
+    millis += (t.nanos || 0) / 1_000_000;
+    return new globalThis.Date(millis);
 }
 
 function fromJsonTimestamp(o: any): Date {
-  if (o instanceof globalThis.Date) {
-    return o;
-  } else if (typeof o === "string") {
-    return new globalThis.Date(o);
-  } else {
-    return fromTimestamp(Timestamp.fromJSON(o));
-  }
+    if (o instanceof globalThis.Date) {
+        return o;
+    } else if (typeof o === "string") {
+        return new globalThis.Date(o);
+    } else {
+        return fromTimestamp(Timestamp.fromJSON(o));
+    }
 }
 
 function isSet(value: any): boolean {
-  return value !== null && value !== undefined;
+    return value !== null && value !== undefined;
 }
 
 export interface MessageFns<T> {
-  encode(message: T, writer?: BinaryWriter): BinaryWriter;
-  decode(input: BinaryReader | Uint8Array, length?: number): T;
-  fromJSON(object: any): T;
-  toJSON(message: T): unknown;
-  create<I extends Exact<DeepPartial<T>, I>>(base?: I): T;
-  fromPartial<I extends Exact<DeepPartial<T>, I>>(object: I): T;
+    encode(message: T, writer?: BinaryWriter): BinaryWriter;
+    decode(input: BinaryReader | Uint8Array, length?: number): T;
+    fromJSON(object: any): T;
+    toJSON(message: T): unknown;
+    create<I extends Exact<DeepPartial<T>, I>>(base?: I): T;
+    fromPartial<I extends Exact<DeepPartial<T>, I>>(object: I): T;
 }
