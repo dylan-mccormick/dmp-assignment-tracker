@@ -30,7 +30,7 @@ pnpm exec oxfmt        # format (frontend also has `pnpm format`)
 pnpm proto:generate    # backend packages only; regenerate gRPC TS from ../proto (requires protoc)
 ```
 
-A local, untracked `.git/hooks/pre-commit` (zsh) runs `pnpm oxlint`/`oxfmt` on staged `.ts`/`.tsx` files. It groups files by their nearest `package.json`, uses `(cd "$PKG_DIR" && pnpm ...)` subshells because `pnpm --dir` was unreliable, and re-stages the formatted files. It needs `grealpath` (`brew install coreutils`). Watch for zsh-specific splitting when editing it: `${(f)VAR}` splits on newlines and `${=VAR}` splits on words.
+A local, untracked `.git/hooks/pre-commit` (zsh) runs `pnpm oxlint`/`oxfmt` on staged `.ts`/`.tsx` files. It groups files by their nearest `package.json`, uses `(cd "$PKG_DIR" && pnpm ...)` subshells because `pnpm --dir` was unreliable, and re-stages the formatted files. It skips `*/generated/*`, so committed generated code stays exactly what ts-proto emits (re-running `proto:generate` on an unchanged proto should produce no diff). It needs `grealpath` (`brew install coreutils`). Watch for zsh-specific splitting when editing it: `${(f)VAR}` splits on newlines and `${=VAR}` splits on words.
 
 ## Architecture
 
@@ -68,15 +68,19 @@ This pattern is established in `services/auth/src/`; follow it in the other serv
 - `index.ts` builds the clients (pg `Pool`, redis) and wires Repository → Service → `startServer`.
 - `repository/` holds an interface (`AuthRepository`) plus an `*Impl` for data access via `pg`. New IDs are `uuid` v7.
 - `service/` holds an interface (`AuthService`) plus an `*Impl` for business logic.
-- `grpcImpl.ts` adapts the service interface to the generated `*Server` type and routes errors through `handleMicroserviceError`.
-- `error/MicroserviceError.ts` carries a `code`, a `userFacingMessage` (sent over gRPC), and a `loggingMessage`.
+- `grpcImpl.ts` adapts the service interface to the generated `*Server` type and routes every rejection through `handleMicroserviceError`, which always calls the callback. Unknown errors become `INTERNAL`.
+- `error/MicroserviceError.ts` carries a **gRPC `status`** `code` (not an HTTP code), a `userFacingMessage` (sent over gRPC as `details`), and a `loggingMessage`. Use `NOT_FOUND`, `ALREADY_EXISTS`, `INVALID_ARGUMENT`, and `UNAUTHENTICATED` for user-caused errors. The gateway passes their message straight to the user.
+- In repositories, map database errors inside each `try` but throw domain errors (e.g. `NOT_FOUND`) **outside** it, so they don't get rewrapped as `INTERNAL`. Unique violations (`23505`) map to `ALREADY_EXISTS`.
+- The Redis client is connected in `index.ts` with `disableOfflineQueue: true`, so commands fail fast while Redis is down and cache-aside falls back to Postgres instead of hanging. Cache reads and writes are best effort, but a failed cache *invalidation* is an error, because it would let revoked tokens through until the TTL expires.
 
 ### Auth
 
 - Google OAuth was chosen so the app never owns passwords. The client ID is public (frontend). The client secret lives **only** in Auth Service.
-- Users are upserted by `google_id`, not email, because email can change. Name, email, and avatar are overwritten from Google on every login. There's no password field and no "change Google account" feature.
-- The JWT has a 7-day TTL and embeds `tokenVersion`. Revocation works by comparing that claim against `users.token_version`, cache-aside in Redis under `token-version:{userId}` (`SoftValidateJwt`). **Logout bumps the version and kills every session on every device.** This is a deliberate simplification, with no separate per-device logout. Account deletion is a soft delete (`deleted_at`) and also clears the Redis key.
-- The frontend login flow is still in progress (`Login.tsx` has a TODO for posting to the backend). The frontend plans to store the JWT in `localStorage`, an accepted trade-off at this scale.
+- **Flow (auth-code, popup):** the frontend's `useGoogleLogin({ flow: "auth-code" })` yields a `code`. It's sent to `POST /api/v1/auth/google`, and auth-service exchanges it with the client secret using redirect URI `"postmessage"` (required for popup-flow codes). Auth-service then fetches the Google profile and upserts the user.
+- Users are upserted by `google_id`, not email, because email can change. This is one atomic `INSERT … ON CONFLICT (google_id) DO UPDATE` (`upsertUserByGoogleId`), and `created` is true when the returned id is the newly generated one. Name, email, and avatar are overwritten from Google on every login. The avatar is optional. A soft-deleted user who signs in again is **restored** (`deleted_at = NULL`). There's no password field and no "change Google account" feature.
+- **The JWT** is HS256 with a 7-day TTL, and its claims are only `{ sub, email, name, avatarUrl, tokenVersion }`. Don't sign the full `User`: its `Date`s become strings and then fail to re-encode as protobuf `Timestamp`s. `SoftValidateJwt` builds its returned `User` from those claims (no googleId or timestamps), so validation never needs a DB read for the profile.
+- **Revocation:** the `tokenVersion` claim is compared against `users.token_version`, cache-aside in Redis under `token-version:{userId}` (5-min TTL). **Logout bumps the version (atomically, `incrementTokenVersion`) and kills every session on every device.** This is a deliberate simplification, with no separate per-device logout. Account deletion is a soft delete (`deleted_at`), which also bumps the version and clears the Redis key. Repository reads ignore deleted users.
+- **Frontend:** the session UI isn't wired up yet. `Login.tsx` still has a TODO to post the code, and Dylan plans to implement this part himself. The plan is to store the JWT in `localStorage` (an accepted trade-off at this scale) and send it as `Authorization: Bearer <jwt>`.
 
 ### Schema notes
 
@@ -87,8 +91,15 @@ The schemas live in `services/<name>/init.sql`.
 
 ### Gateway and frontend
 
-- **Gateway:** `initAPI.ts` sets up the middleware (rate limit, helmet, morgan, body/cookie parsers) and listens on `process.env.PORT`. `index.ts` mounts routers from `endpoints/` under `/api/v1/...` and puts `errorHandler.ts` last. The error handler returns details only when `NODE_ENV=development`. The gateway is also the planned owner of the notification WebSockets.
-- **Frontend:** React 19, Vite, Tailwind v4, and `react-router` (not `react-router-dom`), with the React Compiler enabled through babel. Shared components live in `src/components/` and routes in `src/pages/`. Config comes from `VITE_GOOGLE_CLIENT_ID` and `VITE_API_BASE_URL`. In prod it is served by nginx.
+- **Gateway:** `initAPI.ts` sets up the middleware (a 100 req/min per-IP rate limit, helmet, morgan, body/cookie parsers) and listens on `process.env.PORT` (set to 8080 in compose). `index.ts` mounts routers from `endpoints/` under `/api/v1/...`, then a JSON 404, then `errorHandler.ts` last. The gateway is also the planned owner of the notification WebSockets.
+  - **gRPC clients** live in `src/grpc/`. They are promise wrappers (`unary(...)`) around the generated clients with a 10s deadline, and they reject with the gRPC `ServiceError`. Express 5 forwards async rejections to the error handler, so route handlers just `await` and `throw`.
+  - **Errors:** throw `HttpError(status, message)` for gateway-level validation. `errorHandler` maps gRPC statuses to HTTP (`INVALID_ARGUMENT` 400, `UNAUTHENTICATED` 401, `PERMISSION_DENIED` 403, `NOT_FOUND` 404, `ALREADY_EXISTS` 409, with the service's message passed through). `UNAVAILABLE` and `DEADLINE_EXCEEDED` become a generic 503, and everything else is a 500, with details only when `NODE_ENV=development`.
+  - **Auth:** `middleware/requireAuth.ts` validates `Authorization: Bearer <jwt>` via `SoftValidateJwt` and exposes the user through `getAuthUser(res)`. Responses expose only `{ id, email, name, avatarUrl }`.
+  - **Endpoints:** `POST /auth/google { code }` returns `{ user, jwt, created }` (201 if created, 200 if returning). `GET /auth/me` returns `{ user }`. `POST /auth/logout` returns 204.
+- **Frontend:** React 19, Vite, Tailwind v4, and `react-router` (not `react-router-dom`), with the React Compiler enabled through babel. Shared components live in `src/components/`, routes in `src/pages/`, and global state in `src/context/`.
+  - **Context pattern:** each context is split into `XContext.tsx` (type + `createContext` defaults) and `XContextProvider.tsx` (state), and they're stacked in `App.tsx` via `ComposeProviders`.
+  - **Style** (modelled on dmp-registry-frontend): minimal, `--color-primary: #074885`, with `PrimaryButton`/`SecondaryButton`/`TertiaryButton`. Feedback goes through a dismissable **`BannerContext`** banner (`setBanner({ level: "success" | "error" | "info", message })`, rendered by `StandardLayout`) and an imperative **`ModalContext`** (`showModal({ type: "alert" | "confirm" | "buttonless", ... })`). The usual mutation pattern is a confirm modal, then a `buttonless` modal with `loadingSpinner` while the request runs, then `closeModal()` + `setBanner(...)`. `LoadingBannerContext` (`addProcess`/`removeProcess`) drives a full-screen loading overlay. Logos load from `https://cdn.mnmzc.dev/logos/` (not `mnmzc.us.to`).
+  - **API config:** `VITE_GOOGLE_CLIENT_ID` and `VITE_API_BASE_URL` (`/api/v1`). In dev, Vite proxies `/api` to `API_PROXY_TARGET` (`http://gateway:8080` in compose), so the browser only talks to its own origin and the gateway needs no CORS. Vite inlines `VITE_*` at **build** time, so in prod the runtime `environment:` entry in `docker-compose.prod.yml` has no effect. Prod relies on `/api/v1` being same-origin, served by nginx.
 
 ## Conventions
 
@@ -113,13 +124,14 @@ The schemas live in `services/<name>/init.sql`.
 
 ## Open work
 
-- Gateway: auth routes (`endpoints/authRoutes.ts` is empty), JWT middleware, and WebSockets.
+- Gateway: WebSockets for notifications.
+- The stats, notification, and assignment packages don't build yet. Their generated code needs `@grpc/grpc-js` and `@types/node`, which they don't depend on. The old `services/*-service/` folders (just `node_modules`/`.pnpm-store`) are leftovers from the folder rename and can be deleted.
 - `assignment.proto`, `stats.proto`, and the Assignment Service gRPC server and repository.
 - Stats aggregation logic.
 - Notification: the push mechanism, the notifications table, and the scheduled reminders.
 - `POST /assignment-types`, so the type list can grow.
 - A Postgres migration tool.
-- Frontend: only the routing shell, `Login`, and `PageNotFound` exist. The dashboard, CRUD UI, and account page are still to build.
+- Frontend: the shared UI (banner, modal, loading overlay, buttons, layout) is in place. The sign-in wiring (posting the code, storing the JWT, user/session context, header sign-out) is Dylan's to implement. The dashboard, CRUD UI, and account page are still to build.
 
 ## Working with Dylan
 
