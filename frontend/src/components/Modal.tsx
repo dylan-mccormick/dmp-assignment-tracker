@@ -64,6 +64,7 @@ const Modal = () => {
                             </SecondaryButton>
                         )}
                         <PrimaryButton
+                            danger={modal.type === "confirm" && modal.danger}
                             onClick={() => {
                                 closeModal();
                                 modal.onConfirm?.();
