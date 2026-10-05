@@ -13,6 +13,7 @@ import BannerContextProvider from "./context/BannerContextProvider";
 import LoadingBannerContextProvider from "./context/LoadingBannerContextProvider";
 import ModalContextProvider from "./context/ModalContextProvider";
 import UserContextProvider from "./context/UserContextProvider";
+import Account from "./pages/Account";
 import Dashboard from "./pages/Dashboard";
 import Login from "./pages/Login";
 import PageNotFound from "./pages/PageNotFound";
@@ -50,6 +51,14 @@ const App = () => {
                             element={
                                 <ProtectedRoute>
                                     <Dashboard />
+                                </ProtectedRoute>
+                            }
+                        />
+                        <Route
+                            path="/account"
+                            element={
+                                <ProtectedRoute>
+                                    <Account />
                                 </ProtectedRoute>
                             }
                         />
