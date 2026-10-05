@@ -17,10 +17,10 @@ const authRoutes = (router: Router) => {
         const code = req.body?.code;
         if (typeof code !== "string" || !code) throw new HttpError(400, "A Google auth code is required.");
 
-        const { user, jwt, created } = await authService.signInUser({ googleAuthCode: code });
+        const { user, jwt, created, restored } = await authService.signInUser({ googleAuthCode: code });
         if (!user) throw new Error("Auth service returned no user on sign in.");
 
-        res.status(created ? 201 : 200).json({ user: toPublicUser(user), jwt, created });
+        res.status(created ? 201 : 200).json({ user: toPublicUser(user), jwt, created, restored });
     });
 
     // Returns the signed-in user

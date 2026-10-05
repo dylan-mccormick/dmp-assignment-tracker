@@ -42,6 +42,8 @@ export interface SignInUserResponse {
   user: User | undefined;
   jwt: string;
   created: boolean;
+  /** a soft-deleted account was restored by signing in */
+  restored: boolean;
 }
 
 export interface SoftValidateJwtRequest {
@@ -374,7 +376,7 @@ export const SignInUserRequest: MessageFns<SignInUserRequest> = {
 };
 
 function createBaseSignInUserResponse(): SignInUserResponse {
-  return { user: undefined, jwt: "", created: false };
+  return { user: undefined, jwt: "", created: false, restored: false };
 }
 
 export const SignInUserResponse: MessageFns<SignInUserResponse> = {
@@ -387,6 +389,9 @@ export const SignInUserResponse: MessageFns<SignInUserResponse> = {
     }
     if (message.created !== false) {
       writer.uint32(16).bool(message.created);
+    }
+    if (message.restored !== false) {
+      writer.uint32(32).bool(message.restored);
     }
     return writer;
   },
@@ -428,6 +433,14 @@ export const SignInUserResponse: MessageFns<SignInUserResponse> = {
             message.created = reader.bool();
             continue;
           }
+          case 4: {
+            if (tag !== 32) {
+              break;
+            }
+
+            message.restored = reader.bool();
+            continue;
+          }
         }
         if ((tag & 7) === 4 || tag === 0) {
           break;
@@ -445,6 +458,7 @@ export const SignInUserResponse: MessageFns<SignInUserResponse> = {
       user: isSet(object.user) ? User.fromJSON(object.user) : undefined,
       jwt: isSet(object.jwt) ? globalThis.String(object.jwt) : "",
       created: isSet(object.created) ? globalThis.Boolean(object.created) : false,
+      restored: isSet(object.restored) ? globalThis.Boolean(object.restored) : false,
     };
   },
 
@@ -459,6 +473,9 @@ export const SignInUserResponse: MessageFns<SignInUserResponse> = {
     if (message.created !== false) {
       obj.created = message.created;
     }
+    if (message.restored !== false) {
+      obj.restored = message.restored;
+    }
     return obj;
   },
 
@@ -470,6 +487,7 @@ export const SignInUserResponse: MessageFns<SignInUserResponse> = {
     message.user = (object.user !== undefined && object.user !== null) ? User.fromPartial(object.user) : undefined;
     message.jwt = object.jwt ?? "";
     message.created = object.created ?? false;
+    message.restored = object.restored ?? false;
     return message;
   },
 };

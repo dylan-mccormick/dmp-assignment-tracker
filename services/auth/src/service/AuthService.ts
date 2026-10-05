@@ -8,9 +8,10 @@ export interface AuthService {
      * Either creates or returns a user who tries to log in via OAuth2 and provides their Google auth code
      *
      * @param googleAuthCode The authorization code from Google's OAuth2 auth-code flow
-     * @returns The logged-in user, the JWT for their session, and whether this is a new user (created)
+     * @returns The logged-in user, the JWT for their session, whether this is a new user (created), and whether a
+     *   soft-deleted account was restored (restored)
      */
-    signInUser(googleAuthCode: string): Promise<{ user: User; jwt: string; created: boolean }>;
+    signInUser(googleAuthCode: string): Promise<{ user: User; jwt: string; created: boolean; restored: boolean }>;
 
     /**
      * Validates a users JWT (ensures it is not expired/revoked). The returned user is built from the JWT claims, so it

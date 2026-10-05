@@ -21,7 +21,7 @@ const grpcImpl = (authService: AuthService): AuthenticationServiceServer => {
             const { googleAuthCode } = call.request;
             authService
                 .signInUser(googleAuthCode)
-                .then(({ user, jwt, created }) => callback(null, { user, jwt, created }))
+                .then(({ user, jwt, created, restored }) => callback(null, { user, jwt, created, restored }))
                 .catch(err => handleMicroserviceError(err, callback));
         },
 

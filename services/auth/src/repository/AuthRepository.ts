@@ -55,14 +55,18 @@ export interface AuthRepository {
 
     /**
      * Creates the user for a Google account, or refreshes their profile if they already exist. A soft-deleted user
-     * signing in again is restored.
+     * signing in again is restored (for now, at any time; a 30-day grace period followed by a permanent purge is
+     * planned).
      *
      * @param googleId The google id of the user
      * @param props The user's current Google profile
-     * @returns The user, and whether they were newly created
+     * @returns The user, whether they were newly created, and whether a soft-deleted account was restored
      * @throws {MicroserviceError} ALREADY_EXISTS if another account uses the email, INTERNAL if the database fails
      */
-    upsertUserByGoogleId(googleId: string, props: GoogleProfileProps): Promise<{ user: User; created: boolean }>;
+    upsertUserByGoogleId(
+        googleId: string,
+        props: GoogleProfileProps
+    ): Promise<{ user: User; created: boolean; restored: boolean }>;
 
     /**
      * Updates a user to follow the specified properties

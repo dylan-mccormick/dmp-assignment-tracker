@@ -40,7 +40,9 @@ export class AuthServiceImpl implements AuthService {
         this.repository = repository;
     }
 
-    async signInUser(googleAuthCode: string): Promise<{ user: User; jwt: string; created: boolean }> {
+    async signInUser(
+        googleAuthCode: string
+    ): Promise<{ user: User; jwt: string; created: boolean; restored: boolean }> {
         const jwtSecret = requireEnv("JWT_SECRET");
 
         // Connect OAuth2 ("postmessage" is the redirect URI for codes from the popup auth-code flow)
@@ -89,7 +91,7 @@ export class AuthServiceImpl implements AuthService {
         }
 
         // Create the user, or refresh their profile from Google if they already exist
-        const { user, created } = await this.repository.upsertUserByGoogleId(profile.id, {
+        const { user, created, restored } = await this.repository.upsertUserByGoogleId(profile.id, {
             email: profile.email,
             name: profile.name,
             avatarUrl: profile.picture ?? undefined
@@ -104,7 +106,7 @@ export class AuthServiceImpl implements AuthService {
         };
         const jwt = sign(claims, jwtSecret, { algorithm: JWT_ALGORITHM, expiresIn: JWT_TTL });
 
-        return { user, jwt, created };
+        return { user, jwt, created, restored };
     }
 
     async softValidateJwt(jwt: string): Promise<{ user: User | undefined; valid: boolean }> {

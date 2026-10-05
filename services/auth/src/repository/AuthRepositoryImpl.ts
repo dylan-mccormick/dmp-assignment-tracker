@@ -110,24 +110,29 @@ export class AuthRepositoryImpl implements AuthRepository {
         return tokenVersion;
     }
 
-    async upsertUserByGoogleId(googleId: string, props: GoogleProfileProps): Promise<{ user: User; created: boolean }> {
+    async upsertUserByGoogleId(
+        googleId: string,
+        props: GoogleProfileProps
+    ): Promise<{ user: User; created: boolean; restored: boolean }> {
         const newId = uuidv7();
 
         try {
+            // `previous` reads the row as it was before this statement, since RETURNING only sees the new values
             const result = await this.pool.query(
-                `INSERT INTO users (id, google_id, email, name, avatar_url) VALUES ($1, $2, $3, $4, $5)
+                `WITH previous AS (SELECT deleted_at FROM users WHERE google_id = $2)
+                INSERT INTO users (id, google_id, email, name, avatar_url) VALUES ($1, $2, $3, $4, $5)
                 ON CONFLICT (google_id) DO UPDATE SET
                     email = EXCLUDED.email,
                     name = EXCLUDED.name,
                     avatar_url = EXCLUDED.avatar_url,
                     deleted_at = NULL,
                     updated_at = NOW()
-                RETURNING *`,
+                RETURNING *, COALESCE((SELECT deleted_at IS NOT NULL FROM previous), FALSE) AS restored`,
                 [newId, googleId, props.email, props.name, props.avatarUrl ?? null]
             );
 
             const user = rowToUser(result.rows[0]);
-            return { user, created: user.id === newId };
+            return { user, created: user.id === newId, restored: result.rows[0].restored };
         } catch (error) {
             if (isUniqueViolation(error))
                 throw new MicroserviceError(

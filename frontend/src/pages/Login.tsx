@@ -14,6 +14,7 @@ interface SignInResponse {
     user: { id: string; email: string; name: string; avatarUrl: string };
     jwt: string;
     created: boolean;
+    restored: boolean;
 }
 
 const Login = () => {
@@ -42,15 +43,15 @@ const Login = () => {
                 return;
             }
 
-            const { user, jwt, created } = body as SignInResponse;
+            const { user, jwt, created, restored } = body as SignInResponse;
             localStorage.setItem("jwt", jwt);
 
-            setBanner({
-                level: "success",
-                message: created
-                    ? `Welcome, ${user.name}! Your account has been created.`
-                    : `Welcome back, ${user.name}!`
-            });
+            const welcome = restored
+                ? `Welcome back, ${user.name}! Your account has been restored.`
+                : created
+                  ? `Welcome, ${user.name}! Your account has been created.`
+                  : `Welcome back, ${user.name}!`;
+            setBanner({ level: "success", message: welcome });
             navigate("/dashboard");
         } catch (error) {
             console.error(error);

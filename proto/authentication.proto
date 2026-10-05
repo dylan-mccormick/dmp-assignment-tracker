@@ -23,6 +23,7 @@ message SignInUserResponse {
     User user = 1;
     string jwt = 3;
     bool created = 2;
+    bool restored = 4; // a soft-deleted account was restored by signing in
 }
 
 message SoftValidateJwtRequest {
