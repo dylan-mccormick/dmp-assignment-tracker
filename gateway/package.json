@@ -5,18 +5,25 @@
     "keywords": [],
     "license": "ISC",
     "author": "",
-    "type": "module",
     "main": "index.js",
     "scripts": {
         "start": "tsc; node dist/index.js",
         "build": "tsc",
-        "dev": "nodemon -e js,ts,env --watch 'src/' --exec 'tsc; node dist/index.js'"
+        "dev": "nodemon -e js,ts,env --watch 'src/' --exec 'tsc; node dist/index.js'",
+        "proto:generate": "protoc --plugin=./node_modules/.bin/protoc-gen-ts_proto --ts_proto_out=./src/generated --proto_path=./../proto ./../proto/*.proto --ts_proto_opt=outputServices=grpc-js"
     },
     "devDependencies": {
-        "@types/node": "^26.4.1",
+        "@types/body-parser": "^1.19.6",
+        "@types/cookie-parser": "^1.4.10",
+        "@types/express": "^5.0.6",
+        "@types/morgan": "^1.9.10",
+        "@types/node": "^26.5.0",
+        "grpc-tools": "^1.13.1",
         "nodemon": "^3.1.14",
         "oxfmt": "^0.66.0",
         "oxlint": "^1.79.0",
+        "ts-node": "^10.9.2",
+        "ts-proto": "^2.12.3",
         "typescript": "^7.0.2"
     },
     "devEngines": {
@@ -25,5 +32,16 @@
             "version": "^11.10.0",
             "onFail": "download"
         }
+    },
+    "dependencies": {
+        "@bufbuild/protobuf": "^2.15.0",
+        "@grpc/grpc-js": "^1.14.4",
+        "@grpc/proto-loader": "^0.8.1",
+        "body-parser": "^2.3.0",
+        "cookie-parser": "^1.4.7",
+        "express": "^5.2.1",
+        "express-rate-limit": "^8.7.0",
+        "helmet": "^8.3.0",
+        "morgan": "^1.12.0"
     }
 }

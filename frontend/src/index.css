@@ -1,1 +1,21 @@
 @import "tailwindcss";
+
+@theme {
+    --color-primary: #074885;
+}
+
+@layer base {
+    body {
+        @apply font-sans;
+    }
+}
+
+/* Banner auto-dismiss countdown: the bar shrinks over the banner's duration */
+@keyframes banner-countdown {
+    from {
+        transform: scaleX(1);
+    }
+    to {
+        transform: scaleX(0);
+    }
+}

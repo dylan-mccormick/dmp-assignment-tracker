@@ -23,8 +23,11 @@ services:
     gateway:
         build:
             target: dev
-            context: ./gateway
+            context: .
+            dockerfile: ./gateway/Dockerfile
         environment:
+            PORT: 8080
+            CI: true
             NODE_ENV: development
             JWT_SECRET: ${JWT_SECRET}
             AUTH_SERVICE_URL: auth-service:50051
@@ -40,8 +43,10 @@ services:
     auth-service:
         build:
             target: dev
-            context: ./services/auth
+            context: .
+            dockerfile: ./services/auth/Dockerfile
         environment:
+            CI: true
             NODE_ENV: development
             DATABASE_URL: postgres://${AUTH_DB_USER}:${AUTH_DB_PASSWORD}@postgres-auth:5432/auth
             REDIS_URL: redis://redis:6379
@@ -49,7 +54,7 @@ services:
             GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
             JWT_SECRET: ${JWT_SECRET}
         volumes:
-            - ./services/auth-service:/app
+            - ./services/auth:/app
             - /app/node_modules
         ports:
             - 50051:50051
@@ -58,14 +63,16 @@ services:
     assignment-service:
         build:
             target: dev
-            context: ./services/assignment
+            context: .
+            dockerfile: ./services/assignment/Dockerfile
         environment:
+            CI: true
             NODE_ENV: development
-            DATABASE_URL: postgres://${AUTH_DB_USER}:${AUTH_DB_PASSWORD}@postgres-auth:5432/auth
+            DATABASE_URL: postgres://${ASSIGNMENT_DB_USER}:${ASSIGNMENT_DB_PASSWORD}@postgres-assignment:5432/assignments
             REDIS_URL: redis://redis:6379
             RABBITMQ_URL: amqp://${RABBITMQ_USER}:${RABBITMQ_PASSWORD}@rabbitmq:5672
         volumes:
-            - ./services/assignment-service:/app
+            - ./services/assignment:/app
             - /app/node_modules
         ports:
             - 50052:50052
@@ -74,26 +81,30 @@ services:
     notification-service:
         build:
             target: dev
-            context: ./services/notification
+            context: .
+            dockerfile: ./services/notification/Dockerfile
         environment:
+            CI: true
             NODE_ENV: development
             RABBITMQ_URL: amqp://${RABBITMQ_USER}:${RABBITMQ_PASSWORD}@rabbitmq:5672
         volumes:
-            - ./services/notification-service:/app
+            - ./services/notification:/app
             - /app/node_modules
         command: pnpm dev
 
     stats-service:
         build:
             target: dev
-            context: ./services/stats
+            context: .
+            dockerfile: ./services/stats/Dockerfile
         environment:
+            CI: true
             NODE_ENV: development
             REDIS_URL: redis://redis:6379
             RABBITMQ_URL: amqp://${RABBITMQ_USER}:${RABBITMQ_PASSWORD}@rabbitmq:5672
             ASSIGNMENT_SERVICE_URL: assignment-service:50052
         volumes:
-            - ./services/stats-service:/app
+            - ./services/stats:/app
             - /app/node_modules
         ports:
             - 50053:50053
@@ -104,7 +115,10 @@ services:
             target: dev
             context: ./frontend
         environment:
-            VITE_API_BASE_URL: http://192.168.1.198:8080/api/v1
+            CI: true
+            VITE_GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+            VITE_API_BASE_URL: /api/v1
+            API_PROXY_TARGET: http://gateway:8080
         volumes:
             - ./frontend:/app
             - /app/node_modules

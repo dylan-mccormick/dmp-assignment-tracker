@@ -1,19 +1,19 @@
 FROM ghcr.io/pnpm/pnpm:11 AS base
 RUN pnpm runtime set node 26 -g
 WORKDIR /app
-COPY pnpm-lock.yaml ./
-COPY package*.json ./
+COPY gateway/pnpm-*.yaml ./
+COPY gateway/package*.json ./
 
 # dev
 FROM base AS dev
-RUN pnpm install
-COPY . .
+RUN pnpm install --config.confirm-modules-purge=false
+COPY gateway/ ./
 CMD ["pnpm", "dev"]
 
 # build
 FROM base AS build
 RUN pnpm install
-COPY . .
+COPY gateway/ ./
 RUN pnpm build
 
 # prod

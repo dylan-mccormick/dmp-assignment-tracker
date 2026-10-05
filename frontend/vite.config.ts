@@ -7,7 +7,14 @@ import { defineConfig } from "vite";
 export default defineConfig({
     server: {
         port: 3000,
-        strictPort: true
+        strictPort: true,
+        // Proxy API calls to the gateway so the browser only ever talks to this origin (no CORS, works from any host)
+        proxy: {
+            "/api": {
+                target: process.env.API_PROXY_TARGET ?? "http://localhost:8080",
+                changeOrigin: true
+            }
+        }
     },
     plugins: [react(), tailwindcss(), babel({ presets: [reactCompilerPreset()] })]
 });
