@@ -20,5 +20,5 @@ RUN pnpm build
 FROM base AS prod
 RUN pnpm install --prod
 COPY --from=build /app/dist ./dist
-EXPOSE 50052
+EXPOSE 50051
 CMD ["node", "dist/index.js"]
