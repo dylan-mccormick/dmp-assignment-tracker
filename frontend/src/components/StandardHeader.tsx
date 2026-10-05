@@ -21,12 +21,14 @@ const StandardHeader = ({ hideNavbar, setNavOpen }: StandardHeaderProps) => {
             <header className="w-full h-16 border-b border-gray-300 flex items-center justify-between px-4">
                 {/* Left */}
                 <div className="flex items-center h-16">
-                    <button className={`button-link text-black ${hideNavbar ? "hidden" : ""}`}>
-                        <Menu
-                            className="mr-2"
-                            onClick={() => setNavOpen(n => !n)}
-                        />
-                    </button>
+                    {!hideNavbar && (
+                        <button
+                            className="cursor-pointer text-black"
+                            aria-label="Toggle navigation"
+                            onClick={() => setNavOpen(n => !n)}>
+                            <Menu className="mr-2" />
+                        </button>
+                    )}
                     <Link
                         className="button-link no-underline flex items-center h-16"
                         to="/">

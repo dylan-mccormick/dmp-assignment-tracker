@@ -22,7 +22,10 @@ const StandardLayout = ({ title, sidebar, children }: StandardLayoutProps) => {
         <div className="h-screen w-screen overflow-hidden flex flex-col">
             <title>{title ? title + " | DMP Assignment Tracker" : "DMP Assignment Tracker"}</title>
 
-            <StandardHeader setNavOpen={setNavOpen} />
+            <StandardHeader
+                hideNavbar={sidebar.length === 0}
+                setNavOpen={setNavOpen}
+            />
 
             <div className="flex flex-1 overflow-hidden">
                 {sidebar.length > 0 && navOpen && <StandardNavbar items={sidebar} />}
