@@ -21,6 +21,7 @@
   },
   "devDependencies": {
     "@types/node": "^26.4.1",
+    "@types/pg": "^8.23.1",
     "nodemon": "^3.1.14",
     "oxfmt": "^0.66.0",
     "oxlint": "^1.79.0",
@@ -28,6 +29,9 @@
     "typescript": "^7.0.2"
   },
   "dependencies": {
-    "@bufbuild/protobuf": "^2.15.0"
+    "@bufbuild/protobuf": "^2.15.0",
+    "@grpc/grpc-js": "^1.14.5",
+    "pg": "^8.23.1",
+    "uuid": "^14.0.2"
   }
 }
