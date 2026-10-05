@@ -1,30 +1,76 @@
 // Login.tsx
 // A page to allow the user to sign in via Google
 
-import { useGoogleLogin } from "@react-oauth/google";
-import { useState } from "react";
+import { type CodeResponse, useGoogleLogin } from "@react-oauth/google";
+import { useContext } from "react";
 import { useNavigate } from "react-router";
 
 import PrimaryButton from "../components/PrimaryButton";
 import StandardLayout from "../components/StandardLayout";
+import { BannerContext } from "../context/BannerContext";
+import { ModalContext } from "../context/ModalContext";
+
+interface SignInResponse {
+    user: { id: string; email: string; name: string; avatarUrl: string };
+    jwt: string;
+    created: boolean;
+}
 
 const Login = () => {
     // Navigate
     const navigate = useNavigate();
 
-    // State
-    const [googleLoginError, setGoogleLoginError] = useState<string>();
+    // Context
+    const { setBanner } = useContext(BannerContext);
+    const { showModal, closeModal } = useContext(ModalContext);
+
+    // Exchanges the Google auth code for a session via the gateway
+    const signIn = async ({ code }: CodeResponse) => {
+        setBanner(undefined);
+        showModal({ type: "buttonless", title: "Signing in...", loadingSpinner: true });
+
+        try {
+            const res = await fetch(`${import.meta.env.VITE_API_BASE_URL ?? "/api/v1"}/auth/google`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ code })
+            });
+            const body = await res.json().catch(() => undefined);
+
+            if (!res.ok) {
+                setBanner({ level: "error", message: body?.error ?? "Sign in failed. Please try again." });
+                return;
+            }
+
+            const { user, jwt, created } = body as SignInResponse;
+            localStorage.setItem("jwt", jwt);
+
+            setBanner({
+                level: "success",
+                message: created
+                    ? `Welcome, ${user.name}! Your account has been created.`
+                    : `Welcome back, ${user.name}!`
+            });
+            navigate("/dashboard");
+        } catch (error) {
+            console.error(error);
+            setBanner({ level: "error", message: "Could not reach the server. Please try again." });
+        } finally {
+            closeModal();
+        }
+    };
 
     // Google sign-in (auth-code flow: the code is exchanged for tokens by the auth service)
     const googleLogin = useGoogleLogin({
         flow: "auth-code",
-        onSuccess: _codeResponse => {
-            // TODO: post _codeResponse.code to backend to get user info
-
-            navigate("/dashboard");
-        },
+        onSuccess: signIn,
         onError: () => {
-            setGoogleLoginError("An error occured. Please try again.");
+            setBanner({ level: "error", message: "Google sign in failed. Please try again." });
+        },
+        onNonOAuthError: ({ type }) => {
+            // closing the popup is a deliberate cancel, not an error
+            if (type === "popup_closed") return;
+            setBanner({ level: "error", message: "Could not open the Google sign in window. Please try again." });
         }
     });
 
@@ -36,7 +82,6 @@ const Login = () => {
                 <div className="flex flex-col items-center justify-center h-full">
                     <h1 className="text-3xl font-extralight mb-8">Login</h1>
                     <PrimaryButton onClick={() => googleLogin()}>Sign in with Google</PrimaryButton>
-                    {googleLoginError && <p className="text-red-400">{googleLoginError}</p>}
                 </div>
             </StandardLayout>
         </>
