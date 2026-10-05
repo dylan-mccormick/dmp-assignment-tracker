@@ -4,7 +4,8 @@
 import { CircleUserRound } from "lucide-react";
 import { useContext } from "react";
 
-import { API_BASE_URL, JWT_STORAGE_KEY } from "../config";
+import apiFetch from "../apiClient";
+import { JWT_STORAGE_KEY } from "../config";
 import { BannerContext } from "../context/BannerContext";
 import { ModalContext } from "../context/ModalContext";
 import { LOGGED_OUT, UserContext } from "../context/UserContext";
@@ -23,10 +24,7 @@ const HeaderUserMenu = () => {
         showModal({ type: "buttonless", title: "Logging out...", loadingSpinner: true });
 
         try {
-            const res = await fetch(`${API_BASE_URL}/auth/logout`, {
-                method: "POST",
-                headers: { Authorization: `Bearer ${localStorage.getItem(JWT_STORAGE_KEY)}` }
-            });
+            const res = await apiFetch("/auth/logout", { method: "POST" });
 
             // 401: the session was already revoked or expired, so there's nothing left to revoke
             if (!res.ok && res.status !== 401) {

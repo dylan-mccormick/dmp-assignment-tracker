@@ -5,9 +5,10 @@ import { type CodeResponse, useGoogleLogin } from "@react-oauth/google";
 import { useContext } from "react";
 import { Navigate, useNavigate } from "react-router";
 
+import apiFetch from "../apiClient";
 import PrimaryButton from "../components/PrimaryButton";
 import StandardLayout from "../components/StandardLayout";
-import { API_BASE_URL, JWT_STORAGE_KEY } from "../config";
+import { JWT_STORAGE_KEY } from "../config";
 import { BannerContext } from "../context/BannerContext";
 import { ModalContext } from "../context/ModalContext";
 import { UserContext } from "../context/UserContext";
@@ -34,11 +35,7 @@ const Login = () => {
         showModal({ type: "buttonless", title: "Signing in...", loadingSpinner: true });
 
         try {
-            const res = await fetch(`${API_BASE_URL}/auth/google`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ code })
-            });
+            const res = await apiFetch("/auth/google", { method: "POST", body: { code } });
             const body = await res.json().catch(() => undefined);
 
             if (!res.ok) {

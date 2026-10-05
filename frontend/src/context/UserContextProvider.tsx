@@ -3,7 +3,8 @@
 
 import { type ReactNode, useContext, useEffect, useState } from "react";
 
-import { API_BASE_URL, JWT_STORAGE_KEY } from "../config";
+import apiFetch from "../apiClient";
+import { JWT_STORAGE_KEY } from "../config";
 import { BannerContext } from "./BannerContext";
 import { LoadingBannerContext } from "./LoadingBannerContext";
 import { LOGGED_OUT, type User, UserContext } from "./UserContext";
@@ -28,10 +29,7 @@ const UserContextProvider = ({ children }: { children: ReactNode }) => {
 
         const fetchUser = async () => {
             try {
-                const res = await fetch(`${API_BASE_URL}/auth/me`, {
-                    headers: { Authorization: `Bearer ${jwt}` },
-                    signal: controller.signal
-                });
+                const res = await apiFetch("/auth/me", { signal: controller.signal });
 
                 if (res.status === 401) {
                     // expired or revoked: forget it
