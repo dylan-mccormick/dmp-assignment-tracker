@@ -13,6 +13,7 @@ services:
             POSTGRES_PASSWORD: ${AUTH_DB_PASSWORD}
         volumes:
             - auth_db_data:/var/lib/postgresql
+            - ./services/auth/init.sql:/docker-entrypoint-initdb.d/init.sql
         networks:
             - backend_net
 
@@ -25,6 +26,7 @@ services:
             POSTGRES_PASSWORD: ${ASSIGNMENT_DB_PASSWORD}
         volumes:
             - assignment_db_data:/var/lib/postgresql
+            - ./services/assignment/init.sql:/docker-entrypoint-initdb.d/init.sql
         networks:
             - backend_net
 
