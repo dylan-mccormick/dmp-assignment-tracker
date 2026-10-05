@@ -151,6 +151,17 @@ export class AuthServiceImpl implements AuthService {
         return { loggedOut: true };
     }
 
+    async getUser(userId: string): Promise<{ user: User }> {
+        const user = await this.repository.getUserById(userId);
+        if (!user)
+            throw new MicroserviceError(
+                status.NOT_FOUND,
+                "User not found.",
+                "Attempted to get a user that does not exist."
+            );
+        return { user };
+    }
+
     async deleteUser(userId: string): Promise<{ deleted: boolean }> {
         await this.repository.deleteUser(userId); // idempotent delete
         return { deleted: true };

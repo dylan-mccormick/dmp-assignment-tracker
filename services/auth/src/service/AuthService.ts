@@ -36,5 +36,14 @@ export interface AuthService {
      * @param userId The id of the user to delete
      * @returns True when the user is marked as deleted
      */
+    /**
+     * Gets an active user's full account details (unlike softValidateJwt, read from the database)
+     *
+     * @param userId The id of the user to get
+     * @returns The user
+     * @throws {MicroserviceError} NOT_FOUND if the user does not exist, INTERNAL if the database fails
+     */
+    getUser(userId: string): Promise<{ user: User }>;
+
     deleteUser(userId: string): Promise<{ deleted: boolean }>;
 }

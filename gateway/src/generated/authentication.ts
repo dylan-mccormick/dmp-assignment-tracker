@@ -63,6 +63,14 @@ export interface LogOutUserResponse {
   loggedOut: boolean;
 }
 
+export interface GetUserRequest {
+  userId: string;
+}
+
+export interface GetUserResponse {
+  user: User | undefined;
+}
+
 export interface DeleteUserRequest {
   userId: string;
 }
@@ -790,6 +798,146 @@ export const LogOutUserResponse: MessageFns<LogOutUserResponse> = {
   },
 };
 
+function createBaseGetUserRequest(): GetUserRequest {
+  return { userId: "" };
+}
+
+export const GetUserRequest: MessageFns<GetUserRequest> = {
+  encode(message: GetUserRequest, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.userId !== "") {
+      writer.uint32(10).string(message.userId);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): GetUserRequest {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseGetUserRequest();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
+
+            message.userId = reader.string();
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
+
+  fromJSON(object: any): GetUserRequest {
+    return {
+      userId: isSet(object.userId)
+        ? globalThis.String(object.userId)
+        : isSet(object.user_id)
+        ? globalThis.String(object.user_id)
+        : "",
+    };
+  },
+
+  toJSON(message: GetUserRequest): unknown {
+    const obj: any = {};
+    if (message.userId !== "") {
+      obj.userId = message.userId;
+    }
+    return obj;
+  },
+
+  create<I extends Exact<DeepPartial<GetUserRequest>, I>>(base?: I): GetUserRequest {
+    return GetUserRequest.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<GetUserRequest>, I>>(object: I): GetUserRequest {
+    const message = createBaseGetUserRequest();
+    message.userId = object.userId ?? "";
+    return message;
+  },
+};
+
+function createBaseGetUserResponse(): GetUserResponse {
+  return { user: undefined };
+}
+
+export const GetUserResponse: MessageFns<GetUserResponse> = {
+  encode(message: GetUserResponse, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.user !== undefined) {
+      User.encode(message.user, writer.uint32(10).fork()).join();
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): GetUserResponse {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseGetUserResponse();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
+
+            message.user = User.decode(reader, reader.uint32());
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
+
+  fromJSON(object: any): GetUserResponse {
+    return { user: isSet(object.user) ? User.fromJSON(object.user) : undefined };
+  },
+
+  toJSON(message: GetUserResponse): unknown {
+    const obj: any = {};
+    if (message.user !== undefined) {
+      obj.user = User.toJSON(message.user);
+    }
+    return obj;
+  },
+
+  create<I extends Exact<DeepPartial<GetUserResponse>, I>>(base?: I): GetUserResponse {
+    return GetUserResponse.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<GetUserResponse>, I>>(object: I): GetUserResponse {
+    const message = createBaseGetUserResponse();
+    message.user = (object.user !== undefined && object.user !== null) ? User.fromPartial(object.user) : undefined;
+    return message;
+  },
+};
+
 function createBaseDeleteUserRequest(): DeleteUserRequest {
   return { userId: "" };
 }
@@ -961,6 +1109,15 @@ export const AuthenticationServiceService = {
     responseSerialize: (value: LogOutUserResponse): Buffer => Buffer.from(LogOutUserResponse.encode(value).finish()),
     responseDeserialize: (value: Buffer): LogOutUserResponse => LogOutUserResponse.decode(value),
   },
+  getUser: {
+    path: "/authentication.AuthenticationService/GetUser" as const,
+    requestStream: false as const,
+    responseStream: false as const,
+    requestSerialize: (value: GetUserRequest): Buffer => Buffer.from(GetUserRequest.encode(value).finish()),
+    requestDeserialize: (value: Buffer): GetUserRequest => GetUserRequest.decode(value),
+    responseSerialize: (value: GetUserResponse): Buffer => Buffer.from(GetUserResponse.encode(value).finish()),
+    responseDeserialize: (value: Buffer): GetUserResponse => GetUserResponse.decode(value),
+  },
   deleteUser: {
     path: "/authentication.AuthenticationService/DeleteUser" as const,
     requestStream: false as const,
@@ -976,6 +1133,7 @@ export interface AuthenticationServiceServer extends UntypedServiceImplementatio
   signInUser: handleUnaryCall<SignInUserRequest, SignInUserResponse>;
   softValidateJwt: handleUnaryCall<SoftValidateJwtRequest, SoftValidateJwtResponse>;
   logOutUser: handleUnaryCall<LogOutUserRequest, LogOutUserResponse>;
+  getUser: handleUnaryCall<GetUserRequest, GetUserResponse>;
   deleteUser: handleUnaryCall<DeleteUserRequest, DeleteUserResponse>;
 }
 
@@ -1024,6 +1182,21 @@ export interface AuthenticationServiceClient extends Client {
     metadata: Metadata,
     options: Partial<CallOptions>,
     callback: (error: ServiceError | null, response: LogOutUserResponse) => void,
+  ): ClientUnaryCall;
+  getUser(
+    request: GetUserRequest,
+    callback: (error: ServiceError | null, response: GetUserResponse) => void,
+  ): ClientUnaryCall;
+  getUser(
+    request: GetUserRequest,
+    metadata: Metadata,
+    callback: (error: ServiceError | null, response: GetUserResponse) => void,
+  ): ClientUnaryCall;
+  getUser(
+    request: GetUserRequest,
+    metadata: Metadata,
+    options: Partial<CallOptions>,
+    callback: (error: ServiceError | null, response: GetUserResponse) => void,
   ): ClientUnaryCall;
   deleteUser(
     request: DeleteUserRequest,
