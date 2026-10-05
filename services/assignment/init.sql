@@ -43,6 +43,8 @@ CREATE TABLE IF NOT EXISTS assignments (
 
 -- Create Indexes for faster querying
 CREATE INDEX IF NOT EXISTS idx_semesters_user_id ON semesters(user_id);
+-- semester names are unique per user, ignoring case (overlapping dates are fine)
+CREATE UNIQUE INDEX IF NOT EXISTS uq_semesters_user_name ON semesters(user_id, LOWER(name));
 CREATE INDEX IF NOT EXISTS idx_classes_user_id ON classes(user_id);
 CREATE INDEX IF NOT EXISTS idx_classes_semester_id ON classes(semester_id);
 CREATE INDEX IF NOT EXISTS idx_assignments_user_id ON assignments(user_id);
