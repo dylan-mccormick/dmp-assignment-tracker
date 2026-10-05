@@ -42,7 +42,7 @@ jobs:
             - name: Build and Push (Prod Target)
               uses: docker/build-push-action@v5
               with:
-                  context: ./services/notification
+                  context: .
                   file: ./services/notification/Dockerfile
                   target: prod
                   push: true

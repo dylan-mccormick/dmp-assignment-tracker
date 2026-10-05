@@ -7,13 +7,13 @@ COPY gateway/package*.json ./
 # dev
 FROM base AS dev
 RUN pnpm install --config.confirm-modules-purge=false
-COPY . .
+COPY gateway/ ./
 CMD ["pnpm", "dev"]
 
 # build
 FROM base AS build
 RUN pnpm install
-COPY . .
+COPY gateway/ ./
 RUN pnpm build
 
 # prod

@@ -7,13 +7,13 @@ COPY services/auth/package*.json ./
 # dev
 FROM base AS dev
 RUN pnpm install --config.confirm-modules-purge=false
-COPY . .
+COPY services/auth/ ./
 CMD ["pnpm", "dev"]
 
 # build
 FROM base AS build
 RUN pnpm install
-COPY . .
+COPY services/auth/ ./
 RUN pnpm build
 
 # prod
