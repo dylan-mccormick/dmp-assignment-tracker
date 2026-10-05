@@ -3,7 +3,7 @@
 
 import bodyParser from "body-parser";
 import cookieParser from "cookie-parser";
-import express, { urlencoded } from "express";
+import express from "express";
 import rateLimit from "express-rate-limit";
 import helmet from "helmet";
 import morgan from "morgan";
@@ -13,7 +13,7 @@ const initAPI = () => {
 
     app.use(
         rateLimit({
-            limit: 10,
+            limit: 100, // per client IP
             windowMs: 60 * 1000
         })
     );
