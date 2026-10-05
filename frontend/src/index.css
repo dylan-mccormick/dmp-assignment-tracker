@@ -1,1 +1,11 @@
 @import "tailwindcss";
+
+@theme {
+    --color-primary: #074885;
+}
+
+@layer base {
+    body {
+        @apply font-sans;
+    }
+}
