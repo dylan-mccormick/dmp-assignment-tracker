@@ -1,15 +1,33 @@
 // AuthRepositoryImpl.ts
 // Implementation of the AuthRepository
 
-import { Pool } from "pg";
+import { status } from "@grpc/grpc-js";
+import { DatabaseError, Pool } from "pg";
 import { RedisClientType } from "redis";
 import { v7 as uuidv7 } from "uuid";
 
 import { MicroserviceError } from "../error/MicroserviceError";
 import { User } from "../generated/authentication";
-import { AuthRepository, UpdateUserProps } from "./AuthRepository";
+import { AuthRepository, GoogleProfileProps, UpdateUserProps } from "./AuthRepository";
 
 const TOKEN_VERSION_TTL = 5 * 60; // 5 minutes
+const UNIQUE_VIOLATION = "23505";
+
+const tokenVersionKey = (userId: string) => `token-version:${userId}`;
+
+const rowToUser = (row: any): User => ({
+    id: row.id,
+    googleId: row.google_id,
+    email: row.email,
+    name: row.name,
+    avatarUrl: row.avatar_url ?? "",
+    tokenVersion: row.token_version,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+    deletedAt: row.deleted_at ?? undefined
+});
+
+const isUniqueViolation = (error: unknown) => error instanceof DatabaseError && error.code === UNIQUE_VIOLATION;
 
 export class AuthRepositoryImpl implements AuthRepository {
     private readonly pool;
@@ -20,218 +38,137 @@ export class AuthRepositoryImpl implements AuthRepository {
         this.pool = pool;
     }
 
-    async getUserById(userId: string): Promise<User | undefined> {
+    private async getActiveUserBy(column: "id" | "google_id" | "email", value: string): Promise<User | undefined> {
         try {
-            const result = await this.pool.query("SELECT * FROM users WHERE id = $1", [userId]);
-            if (result.rowCount == 0) return undefined;
-
-            return {
-                id: result.rows[0].id,
-                googleId: result.rows[0].google_id,
-                email: result.rows[0].email,
-                name: result.rows[0].name,
-                avatarUrl: result.rows[0].avatar_url,
-                tokenVersion: result.rows[0].token_version,
-                createdAt: result.rows[0].createdAt,
-                updatedAt: result.rows[0].updatedAt,
-                deletedAt: result.rows[0].deletedAt
-            };
+            const result = await this.pool.query(`SELECT * FROM users WHERE ${column} = $1 AND deleted_at IS NULL`, [
+                value
+            ]);
+            return result.rows[0] ? rowToUser(result.rows[0]) : undefined;
         } catch (error) {
             throw new MicroserviceError(
-                500,
+                status.INTERNAL,
                 "Unknown internal error.",
-                "Failed to get user by ID due to database error.",
+                `Failed to get user by ${column} due to database error.`,
                 error
             );
         }
+    }
+
+    getUserById(userId: string): Promise<User | undefined> {
+        return this.getActiveUserBy("id", userId);
+    }
+
+    getUserByGoogleId(googleId: string): Promise<User | undefined> {
+        return this.getActiveUserBy("google_id", googleId);
+    }
+
+    getUserByEmail(email: string): Promise<User | undefined> {
+        return this.getActiveUserBy("email", email);
     }
 
     async getUserTokenVersionById(userId: string): Promise<number> {
         // try cache
         try {
-            const cachedTokenVersion = await this.redis.get(`token-version:${userId}`);
-            if (cachedTokenVersion) return parseInt(cachedTokenVersion);
+            const cachedTokenVersion = await this.redis.get(tokenVersionKey(userId));
+            if (cachedTokenVersion !== null) return parseInt(cachedTokenVersion);
         } catch (error) {
-            console.error(
-                new MicroserviceError(
-                    500,
-                    "Unknown internal error.",
-                    "Cache failed to get user token version by ID. Falling back to DB...",
-                    error
-                )
+            console.error("Cache failed to get user token version by ID. Falling back to DB...", error);
+        }
+
+        let tokenVersion: number;
+        try {
+            const result = await this.pool.query(
+                "SELECT token_version FROM users WHERE id = $1 AND deleted_at IS NULL",
+                [userId]
+            );
+            tokenVersion = result.rows[0]?.token_version;
+        } catch (error) {
+            throw new MicroserviceError(
+                status.INTERNAL,
+                "Unknown internal error.",
+                "Failed to get user token version due to database error.",
+                error
             );
         }
 
-        try {
-            const result = await this.pool.query("SELECT * FROM users WHERE id = $1", [userId]);
-            if (result.rowCount == 0)
-                throw new MicroserviceError(
-                    404,
-                    "User no longer exists.",
-                    "Attempted to get the token version of a user that does not exist."
-                );
+        if (tokenVersion === undefined)
+            throw new MicroserviceError(
+                status.NOT_FOUND,
+                "User no longer exists.",
+                "Attempted to get the token version of a user that does not exist."
+            );
 
-            await this.redis.set(`token-version:${userId}`, result.rows[0].token_version, {
+        // populate cache (best effort)
+        try {
+            await this.redis.set(tokenVersionKey(userId), tokenVersion, {
                 expiration: { type: "EX", value: TOKEN_VERSION_TTL }
             });
-            return result.rows[0].token_version;
         } catch (error) {
-            throw new MicroserviceError(
-                500,
-                "Unknown internal error.",
-                "Failed to get user by ID due to database error.",
-                error
-            );
+            console.error("Cache failed to set user token version.", error);
         }
+
+        return tokenVersion;
     }
 
-    async getUserByGoogleId(googleId: string): Promise<User | undefined> {
-        try {
-            const result = await this.pool.query("SELECT * FROM users WHERE google_id = $1", [googleId]);
-            if (result.rowCount == 0) return undefined;
+    async upsertUserByGoogleId(googleId: string, props: GoogleProfileProps): Promise<{ user: User; created: boolean }> {
+        const newId = uuidv7();
 
-            return {
-                id: result.rows[0].id,
-                googleId: result.rows[0].google_id,
-                email: result.rows[0].email,
-                name: result.rows[0].name,
-                avatarUrl: result.rows[0].avatar_url,
-                tokenVersion: result.rows[0].token_version,
-                createdAt: result.rows[0].createdAt,
-                updatedAt: result.rows[0].updatedAt,
-                deletedAt: result.rows[0].deletedAt
-            };
-        } catch (error) {
-            throw new MicroserviceError(
-                500,
-                "Unknown internal error.",
-                "Failed to get user by google ID due to database error.",
-                error
+        try {
+            const result = await this.pool.query(
+                `INSERT INTO users (id, google_id, email, name, avatar_url) VALUES ($1, $2, $3, $4, $5)
+                ON CONFLICT (google_id) DO UPDATE SET
+                    email = EXCLUDED.email,
+                    name = EXCLUDED.name,
+                    avatar_url = EXCLUDED.avatar_url,
+                    deleted_at = NULL,
+                    updated_at = NOW()
+                RETURNING *`,
+                [newId, googleId, props.email, props.name, props.avatarUrl ?? null]
             );
-        }
-    }
 
-    async getUserByEmail(email: string): Promise<User | undefined> {
-        try {
-            const result = await this.pool.query("SELECT * FROM users WHERE email = $1", [email]);
-            if (result.rowCount == 0) return undefined;
-
-            return {
-                id: result.rows[0].id,
-                googleId: result.rows[0].google_id,
-                email: result.rows[0].email,
-                name: result.rows[0].name,
-                avatarUrl: result.rows[0].avatar_url,
-                tokenVersion: result.rows[0].token_version,
-                createdAt: result.rows[0].createdAt,
-                updatedAt: result.rows[0].updatedAt,
-                deletedAt: result.rows[0].deletedAt
-            };
+            const user = rowToUser(result.rows[0]);
+            return { user, created: user.id === newId };
         } catch (error) {
-            throw new MicroserviceError(
-                500,
-                "Unknown internal error.",
-                "Failed to get user by email due to database error.",
-                error
-            );
-        }
-    }
-
-    async createUser(googleId: string, props: UpdateUserProps): Promise<User> {
-        if (!props.email || !props.name || !props.avatarUrl || !props.tokenVersion)
-            throw new MicroserviceError(500, "Unknown internal error.", "Must pass all UpdateUserProps to createUser.");
-
-        // ensure uniqueness
-        try {
-            const result = await this.pool.query("SELECT * FROM users WHERE google_id = $1 OR email = $2", [
-                googleId,
-                props.email
-            ]);
-            if (result.rowCount && result.rowCount > 0)
+            if (isUniqueViolation(error))
                 throw new MicroserviceError(
-                    409,
-                    "User already exists with that account.",
-                    "A user with the provided google ID or email already exists."
+                    status.ALREADY_EXISTS,
+                    "Another account already uses this email address.",
+                    "Upsert by google ID conflicted with an existing user's email.",
+                    error
                 );
-        } catch (error) {
-            throw new MicroserviceError(
-                500,
-                "Unknown internal error.",
-                "Failed to get user by google ID or email due to database error.",
-                error
-            );
-        }
 
-        try {
-            const uuid = uuidv7();
-            await this.pool.query(
-                "INSERT INTO users(id, google_id, email, name, avatar_url) VALUES ($1, $2, $3, $4, $5)",
-                [uuid, googleId, props.email, props.name, props.avatarUrl]
-            );
-
-            return {
-                id: uuid,
-                googleId,
-                email: props.email,
-                name: props.name,
-                avatarUrl: props.avatarUrl,
-                tokenVersion: 0,
-                createdAt: new Date(),
-                updatedAt: new Date(),
-                deletedAt: undefined
-            };
-        } catch (error) {
             throw new MicroserviceError(
-                500,
+                status.INTERNAL,
                 "Unknown internal error.",
-                "Failed to create user due to database error.",
+                "Failed to upsert user due to database error.",
                 error
             );
         }
     }
 
     async updateUser(userId: string, props: UpdateUserProps): Promise<void> {
-        // email unique validation
-        if (props.email) {
-            try {
-                const result = await this.pool.query("SELECT * FROM users WHERE email = $1", [props.email]);
-                if (result.rowCount && result.rowCount > 0)
-                    throw new MicroserviceError(
-                        409,
-                        "User already exists with that account.",
-                        "A user with the provided google ID or email already exists."
-                    );
-            } catch (error) {
-                throw new MicroserviceError(
-                    500,
-                    "Unknown internal error.",
-                    "Failed to check for email uniqueness during user update due to database error.",
-                    error
-                );
-            }
-        }
+        const updates: [string, unknown][] = [["updated_at", new Date()]];
+        if (props.email) updates.push(["email", props.email]);
+        if (props.name) updates.push(["name", props.name]);
+        if (props.avatarUrl) updates.push(["avatar_url", props.avatarUrl]);
 
-        // update user
         try {
-            const updates: [string, unknown][] = [["updated_at", new Date()]];
-            if (props.email) updates.push(["email", props.email]);
-            if (props.name) updates.push(["name", props.name]);
-            if (props.tokenVersion) updates.push(["token_version", props.tokenVersion]);
-            if (props.avatarUrl) updates.push(["avatar_url", props.avatarUrl]);
-
             const setClause = updates.map(([column], i) => `${column} = $${i + 1}`).join(", ");
             await this.pool.query(`UPDATE users SET ${setClause} WHERE id = $${updates.length + 1}`, [
                 ...updates.map(([, value]) => value),
                 userId
             ]);
-
-            // invalidate cache
-            if (props.tokenVersion) {
-                await this.redis.del(`token-version:${userId}`);
-            }
         } catch (error) {
+            if (isUniqueViolation(error))
+                throw new MicroserviceError(
+                    status.ALREADY_EXISTS,
+                    "Another account already uses this email address.",
+                    "Update conflicted with an existing user's email.",
+                    error
+                );
+
             throw new MicroserviceError(
-                500,
+                status.INTERNAL,
                 "Unknown internal error.",
                 "Failed to update user due to database error.",
                 error
@@ -239,5 +176,65 @@ export class AuthRepositoryImpl implements AuthRepository {
         }
     }
 
-    async deleteUser(userId: string): Promise<void> {}
+    async incrementTokenVersion(userId: string): Promise<number> {
+        let tokenVersion: number;
+        try {
+            const result = await this.pool.query(
+                `UPDATE users SET token_version = token_version + 1, updated_at = NOW()
+                WHERE id = $1 AND deleted_at IS NULL RETURNING token_version`,
+                [userId]
+            );
+            tokenVersion = result.rows[0]?.token_version;
+        } catch (error) {
+            throw new MicroserviceError(
+                status.INTERNAL,
+                "Unknown internal error.",
+                "Failed to increment token version due to database error.",
+                error
+            );
+        }
+
+        if (tokenVersion === undefined)
+            throw new MicroserviceError(
+                status.NOT_FOUND,
+                "User not found.",
+                "Attempted to increment the token version of a user that does not exist."
+            );
+
+        await this.invalidateTokenVersionCache(userId);
+        return tokenVersion;
+    }
+
+    async deleteUser(userId: string): Promise<void> {
+        try {
+            await this.pool.query(
+                `UPDATE users SET deleted_at = NOW(), updated_at = NOW(), token_version = token_version + 1
+                WHERE id = $1 AND deleted_at IS NULL`,
+                [userId]
+            );
+        } catch (error) {
+            throw new MicroserviceError(
+                status.INTERNAL,
+                "Unknown internal error.",
+                "Failed to delete user due to database error.",
+                error
+            );
+        }
+
+        await this.invalidateTokenVersionCache(userId);
+    }
+
+    private async invalidateTokenVersionCache(userId: string) {
+        try {
+            await this.redis.del(tokenVersionKey(userId));
+        } catch (error) {
+            // the cached entry would let revoked tokens through until its TTL, so surface this as a failure
+            throw new MicroserviceError(
+                status.UNAVAILABLE,
+                "Unknown internal error.",
+                "Failed to invalidate cached token version.",
+                error
+            );
+        }
+    }
 }

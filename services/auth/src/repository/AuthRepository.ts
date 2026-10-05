@@ -1,19 +1,24 @@
 // AuthRepository.ts
 // A repository to handle users for the auth service
 
-import { MicroserviceError } from "../error/MicroserviceError";
+import type { MicroserviceError } from "../error/MicroserviceError";
 import { User } from "../generated/authentication";
 
 export interface UpdateUserProps {
     email?: string;
     name?: string;
     avatarUrl?: string;
-    tokenVersion?: number;
+}
+
+export interface GoogleProfileProps {
+    email: string;
+    name: string;
+    avatarUrl?: string;
 }
 
 export interface AuthRepository {
     /**
-     * Gets the specified user by their Id
+     * Gets the specified active (non-deleted) user by their Id
      *
      * @param userId The id of the user to get
      * @returns The user, or undefined if not found
@@ -22,16 +27,16 @@ export interface AuthRepository {
     getUserById(userId: string): Promise<User | undefined>;
 
     /**
-     * Gets the token version of the user by their specified id
+     * Gets the token version of the specified active user (cache-aside via Redis)
      *
      * @param userId The id of the user to get
      * @returns Token version of the user
-     * @throws {MicroserviceError} If the database fails or the user does not exist
+     * @throws {MicroserviceError} NOT_FOUND if the user does not exist, INTERNAL if the database fails
      */
     getUserTokenVersionById(userId: string): Promise<number>;
 
     /**
-     * Gets the specified user by their google Id
+     * Gets the specified active user by their google Id
      *
      * @param googleId The google id of the user to get
      * @returns The user, or undefined if not found
@@ -40,7 +45,7 @@ export interface AuthRepository {
     getUserByGoogleId(googleId: string): Promise<User | undefined>;
 
     /**
-     * Gets the specified user by their email
+     * Gets the specified active user by their email
      *
      * @param email The email of the user to get
      * @returns The user, or undefined if not found
@@ -49,25 +54,36 @@ export interface AuthRepository {
     getUserByEmail(email: string): Promise<User | undefined>;
 
     /**
-     * Creates a new user with the specified properties
+     * Creates the user for a Google account, or refreshes their profile if they already exist. A soft-deleted user
+     * signing in again is restored.
      *
-     * @param googleId The id of the user to create
-     * @param props Properties describing the user
-     * @throws {MicroserviceError} If the database fails, or a property is not unique
+     * @param googleId The google id of the user
+     * @param props The user's current Google profile
+     * @returns The user, and whether they were newly created
+     * @throws {MicroserviceError} ALREADY_EXISTS if another account uses the email, INTERNAL if the database fails
      */
-    createUser(googleId: string, props: UpdateUserProps): Promise<User>;
+    upsertUserByGoogleId(googleId: string, props: GoogleProfileProps): Promise<{ user: User; created: boolean }>;
 
     /**
      * Updates a user to follow the specified properties
      *
      * @param userId The id of the user to update
      * @param props Properties describing the user
-     * @throws {MicroserviceError} If the database fails, or a property is not unique
+     * @throws {MicroserviceError} ALREADY_EXISTS if the email is taken, INTERNAL if the database fails
      */
     updateUser(userId: string, props: UpdateUserProps): Promise<void>;
 
     /**
-     * Deletes the specified user by id If the user does not exist, nothing will happen
+     * Increments the user's token version, invalidating every JWT issued to them
+     *
+     * @param userId The id of the user
+     * @returns The new token version
+     * @throws {MicroserviceError} NOT_FOUND if the user does not exist, INTERNAL if the database fails
+     */
+    incrementTokenVersion(userId: string): Promise<number>;
+
+    /**
+     * Soft deletes the specified user by id and invalidates their JWTs. If the user does not exist, nothing will happen
      *
      * @param userId The id of the user to delete
      * @throws {MicroserviceError} If the database fails

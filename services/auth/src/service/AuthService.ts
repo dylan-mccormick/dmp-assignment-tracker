@@ -13,7 +13,8 @@ export interface AuthService {
     signInUser(googleAuthCode: string): Promise<{ user: User; jwt: string; created: boolean }>;
 
     /**
-     * Validates a users JWT (ensures it is not expired/revoked)
+     * Validates a users JWT (ensures it is not expired/revoked). The returned user is built from the JWT claims, so it
+     * has no googleId or timestamps
      *
      * @param jwt The JWT to validate
      * @returns The user alongside whether they are valid jwt

@@ -10,7 +10,7 @@ import { AuthService } from "./service/AuthService";
 const startServer = (authService: AuthService) => {
     const server = new Server();
 
-    server.addService(AuthenticationServiceService, grpcImpl(authService) as any);
+    server.addService(AuthenticationServiceService, grpcImpl(authService));
 
     server.bindAsync(`0.0.0.0:50051`, ServerCredentials.createInsecure(), (err, port) => {
         if (err) {

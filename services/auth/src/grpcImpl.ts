@@ -1,22 +1,18 @@
 // grpcImpl.ts
 // Returns an implementation of the gRPC server for this service
 
-import { sendUnaryData } from "@grpc/grpc-js";
+import { sendUnaryData, status } from "@grpc/grpc-js";
 
 import { MicroserviceError } from "./error/MicroserviceError";
 import { AuthenticationServiceServer } from "./generated/authentication";
 import { AuthService } from "./service/AuthService";
 
-const handleMicroserviceError = (err: any, callback: sendUnaryData<any>) => {
-    if (err instanceof MicroserviceError) {
-        callback({
-            name: "Error",
-            code: err.code,
-            message: err.userFacingMessage
-        });
-    }
-
+const handleMicroserviceError = (err: unknown, callback: sendUnaryData<any>) => {
     console.error(err);
+
+    const code = err instanceof MicroserviceError ? err.code : status.INTERNAL;
+    const details = err instanceof MicroserviceError ? err.userFacingMessage : "Unknown internal error.";
+    callback({ name: "Error", message: details, code, details });
 };
 
 const grpcImpl = (authService: AuthService): AuthenticationServiceServer => {
