@@ -68,7 +68,7 @@ services:
         environment:
             CI: true
             NODE_ENV: development
-            DATABASE_URL: postgres://${ASSIGNMENT_DB_USER}:${ASSIGNMENT_DB_PASSWORD}@postgres-assignment:5432/auth
+            DATABASE_URL: postgres://${ASSIGNMENT_DB_USER}:${ASSIGNMENT_DB_PASSWORD}@postgres-assignment:5432/assignments
             REDIS_URL: redis://redis:6379
             RABBITMQ_URL: amqp://${RABBITMQ_USER}:${RABBITMQ_PASSWORD}@rabbitmq:5672
         volumes:
