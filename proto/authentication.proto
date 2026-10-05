@@ -9,17 +9,19 @@ message User {
     string email = 3;
     string name = 4;
     string avatar_url = 5;
+    int32 token_version = 9;
     google.protobuf.Timestamp created_at = 6;
     google.protobuf.Timestamp updated_at = 7;
     google.protobuf.Timestamp deleted_at = 8;
 }
 
 message SignInUserRequest {
-    string google_auth_token = 1;
+    string google_auth_code = 1;
 }
 
 message SignInUserResponse {
     User user = 1;
+    string jwt = 3;
     bool created = 2;
 }
 
@@ -30,6 +32,14 @@ message SoftValidateJwtRequest {
 message SoftValidateJwtResponse {
     User user = 1;
     bool valid = 2;
+}
+
+message LogOutUserRequest {
+    string user_id = 1;
+}
+
+message LogOutUserResponse {
+    bool logged_out = 1;
 }
 
 message DeleteUserRequest {
@@ -43,5 +53,6 @@ message DeleteUserResponse {
 service AuthenticationService {
     rpc SignInUser (SignInUserRequest) returns (SignInUserResponse);
     rpc SoftValidateJwt (SoftValidateJwtRequest) returns (SoftValidateJwtResponse);
+    rpc LogOutUser (LogOutUserRequest) returns (LogOutUserResponse);
     rpc DeleteUser (DeleteUserRequest) returns (DeleteUserResponse);
 }

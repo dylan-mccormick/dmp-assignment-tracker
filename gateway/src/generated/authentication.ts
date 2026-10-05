@@ -29,17 +29,19 @@ export interface User {
     email: string;
     name: string;
     avatarUrl: string;
+    tokenVersion: number;
     createdAt: Date | undefined;
     updatedAt: Date | undefined;
     deletedAt: Date | undefined;
 }
 
 export interface SignInUserRequest {
-    googleAuthToken: string;
+    googleAuthCode: string;
 }
 
 export interface SignInUserResponse {
     user: User | undefined;
+    jwt: string;
     created: boolean;
 }
 
@@ -50,6 +52,14 @@ export interface SoftValidateJwtRequest {
 export interface SoftValidateJwtResponse {
     user: User | undefined;
     valid: boolean;
+}
+
+export interface LogOutUserRequest {
+    userId: string;
+}
+
+export interface LogOutUserResponse {
+    loggedOut: boolean;
 }
 
 export interface DeleteUserRequest {
@@ -67,6 +77,7 @@ function createBaseUser(): User {
         email: "",
         name: "",
         avatarUrl: "",
+        tokenVersion: 0,
         createdAt: undefined,
         updatedAt: undefined,
         deletedAt: undefined
@@ -89,6 +100,9 @@ export const User: MessageFns<User> = {
         }
         if (message.avatarUrl !== "") {
             writer.uint32(42).string(message.avatarUrl);
+        }
+        if (message.tokenVersion !== 0) {
+            writer.uint32(72).int32(message.tokenVersion);
         }
         if (message.createdAt !== undefined) {
             Timestamp.encode(toTimestamp(message.createdAt), writer.uint32(50).fork()).join();
@@ -155,6 +169,14 @@ export const User: MessageFns<User> = {
                         message.avatarUrl = reader.string();
                         continue;
                     }
+                    case 9: {
+                        if (tag !== 72) {
+                            break;
+                        }
+
+                        message.tokenVersion = reader.int32();
+                        continue;
+                    }
                     case 6: {
                         if (tag !== 50) {
                             break;
@@ -206,6 +228,11 @@ export const User: MessageFns<User> = {
                 : isSet(object.avatar_url)
                   ? globalThis.String(object.avatar_url)
                   : "",
+            tokenVersion: isSet(object.tokenVersion)
+                ? globalThis.Number(object.tokenVersion)
+                : isSet(object.token_version)
+                  ? globalThis.Number(object.token_version)
+                  : 0,
             createdAt: isSet(object.createdAt)
                 ? fromJsonTimestamp(object.createdAt)
                 : isSet(object.created_at)
@@ -241,6 +268,9 @@ export const User: MessageFns<User> = {
         if (message.avatarUrl !== "") {
             obj.avatarUrl = message.avatarUrl;
         }
+        if (message.tokenVersion !== 0) {
+            obj.tokenVersion = Math.round(message.tokenVersion);
+        }
         if (message.createdAt !== undefined) {
             obj.createdAt = message.createdAt.toISOString();
         }
@@ -263,6 +293,7 @@ export const User: MessageFns<User> = {
         message.email = object.email ?? "";
         message.name = object.name ?? "";
         message.avatarUrl = object.avatarUrl ?? "";
+        message.tokenVersion = object.tokenVersion ?? 0;
         message.createdAt = object.createdAt ?? undefined;
         message.updatedAt = object.updatedAt ?? undefined;
         message.deletedAt = object.deletedAt ?? undefined;
@@ -271,13 +302,13 @@ export const User: MessageFns<User> = {
 };
 
 function createBaseSignInUserRequest(): SignInUserRequest {
-    return { googleAuthToken: "" };
+    return { googleAuthCode: "" };
 }
 
 export const SignInUserRequest: MessageFns<SignInUserRequest> = {
     encode(message: SignInUserRequest, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
-        if (message.googleAuthToken !== "") {
-            writer.uint32(10).string(message.googleAuthToken);
+        if (message.googleAuthCode !== "") {
+            writer.uint32(10).string(message.googleAuthCode);
         }
         return writer;
     },
@@ -300,7 +331,7 @@ export const SignInUserRequest: MessageFns<SignInUserRequest> = {
                             break;
                         }
 
-                        message.googleAuthToken = reader.string();
+                        message.googleAuthCode = reader.string();
                         continue;
                     }
                 }
@@ -317,18 +348,18 @@ export const SignInUserRequest: MessageFns<SignInUserRequest> = {
 
     fromJSON(object: any): SignInUserRequest {
         return {
-            googleAuthToken: isSet(object.googleAuthToken)
-                ? globalThis.String(object.googleAuthToken)
-                : isSet(object.google_auth_token)
-                  ? globalThis.String(object.google_auth_token)
+            googleAuthCode: isSet(object.googleAuthCode)
+                ? globalThis.String(object.googleAuthCode)
+                : isSet(object.google_auth_code)
+                  ? globalThis.String(object.google_auth_code)
                   : ""
         };
     },
 
     toJSON(message: SignInUserRequest): unknown {
         const obj: any = {};
-        if (message.googleAuthToken !== "") {
-            obj.googleAuthToken = message.googleAuthToken;
+        if (message.googleAuthCode !== "") {
+            obj.googleAuthCode = message.googleAuthCode;
         }
         return obj;
     },
@@ -338,19 +369,22 @@ export const SignInUserRequest: MessageFns<SignInUserRequest> = {
     },
     fromPartial<I extends Exact<DeepPartial<SignInUserRequest>, I>>(object: I): SignInUserRequest {
         const message = createBaseSignInUserRequest();
-        message.googleAuthToken = object.googleAuthToken ?? "";
+        message.googleAuthCode = object.googleAuthCode ?? "";
         return message;
     }
 };
 
 function createBaseSignInUserResponse(): SignInUserResponse {
-    return { user: undefined, created: false };
+    return { user: undefined, jwt: "", created: false };
 }
 
 export const SignInUserResponse: MessageFns<SignInUserResponse> = {
     encode(message: SignInUserResponse, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
         if (message.user !== undefined) {
             User.encode(message.user, writer.uint32(10).fork()).join();
+        }
+        if (message.jwt !== "") {
+            writer.uint32(26).string(message.jwt);
         }
         if (message.created !== false) {
             writer.uint32(16).bool(message.created);
@@ -379,6 +413,14 @@ export const SignInUserResponse: MessageFns<SignInUserResponse> = {
                         message.user = User.decode(reader, reader.uint32());
                         continue;
                     }
+                    case 3: {
+                        if (tag !== 26) {
+                            break;
+                        }
+
+                        message.jwt = reader.string();
+                        continue;
+                    }
                     case 2: {
                         if (tag !== 16) {
                             break;
@@ -402,6 +444,7 @@ export const SignInUserResponse: MessageFns<SignInUserResponse> = {
     fromJSON(object: any): SignInUserResponse {
         return {
             user: isSet(object.user) ? User.fromJSON(object.user) : undefined,
+            jwt: isSet(object.jwt) ? globalThis.String(object.jwt) : "",
             created: isSet(object.created) ? globalThis.Boolean(object.created) : false
         };
     },
@@ -410,6 +453,9 @@ export const SignInUserResponse: MessageFns<SignInUserResponse> = {
         const obj: any = {};
         if (message.user !== undefined) {
             obj.user = User.toJSON(message.user);
+        }
+        if (message.jwt !== "") {
+            obj.jwt = message.jwt;
         }
         if (message.created !== false) {
             obj.created = message.created;
@@ -423,6 +469,7 @@ export const SignInUserResponse: MessageFns<SignInUserResponse> = {
     fromPartial<I extends Exact<DeepPartial<SignInUserResponse>, I>>(object: I): SignInUserResponse {
         const message = createBaseSignInUserResponse();
         message.user = object.user !== undefined && object.user !== null ? User.fromPartial(object.user) : undefined;
+        message.jwt = object.jwt ?? "";
         message.created = object.created ?? false;
         return message;
     }
@@ -576,6 +623,152 @@ export const SoftValidateJwtResponse: MessageFns<SoftValidateJwtResponse> = {
         const message = createBaseSoftValidateJwtResponse();
         message.user = object.user !== undefined && object.user !== null ? User.fromPartial(object.user) : undefined;
         message.valid = object.valid ?? false;
+        return message;
+    }
+};
+
+function createBaseLogOutUserRequest(): LogOutUserRequest {
+    return { userId: "" };
+}
+
+export const LogOutUserRequest: MessageFns<LogOutUserRequest> = {
+    encode(message: LogOutUserRequest, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+        if (message.userId !== "") {
+            writer.uint32(10).string(message.userId);
+        }
+        return writer;
+    },
+
+    decode(input: BinaryReader | Uint8Array, length?: number): LogOutUserRequest {
+        const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+        const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+        if (previousRecursionDepth >= 100) {
+            throw new globalThis.Error("protobuf decode recursion limit exceeded");
+        }
+        (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+        try {
+            const end = length === undefined ? reader.len : reader.pos + length;
+            const message = createBaseLogOutUserRequest();
+            while (reader.pos < end) {
+                const tag = reader.uint32();
+                switch (tag >>> 3) {
+                    case 1: {
+                        if (tag !== 10) {
+                            break;
+                        }
+
+                        message.userId = reader.string();
+                        continue;
+                    }
+                }
+                if ((tag & 7) === 4 || tag === 0) {
+                    break;
+                }
+                reader.skip(tag & 7);
+            }
+            return message;
+        } finally {
+            (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+        }
+    },
+
+    fromJSON(object: any): LogOutUserRequest {
+        return {
+            userId: isSet(object.userId)
+                ? globalThis.String(object.userId)
+                : isSet(object.user_id)
+                  ? globalThis.String(object.user_id)
+                  : ""
+        };
+    },
+
+    toJSON(message: LogOutUserRequest): unknown {
+        const obj: any = {};
+        if (message.userId !== "") {
+            obj.userId = message.userId;
+        }
+        return obj;
+    },
+
+    create<I extends Exact<DeepPartial<LogOutUserRequest>, I>>(base?: I): LogOutUserRequest {
+        return LogOutUserRequest.fromPartial(base ?? ({} as any));
+    },
+    fromPartial<I extends Exact<DeepPartial<LogOutUserRequest>, I>>(object: I): LogOutUserRequest {
+        const message = createBaseLogOutUserRequest();
+        message.userId = object.userId ?? "";
+        return message;
+    }
+};
+
+function createBaseLogOutUserResponse(): LogOutUserResponse {
+    return { loggedOut: false };
+}
+
+export const LogOutUserResponse: MessageFns<LogOutUserResponse> = {
+    encode(message: LogOutUserResponse, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+        if (message.loggedOut !== false) {
+            writer.uint32(8).bool(message.loggedOut);
+        }
+        return writer;
+    },
+
+    decode(input: BinaryReader | Uint8Array, length?: number): LogOutUserResponse {
+        const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+        const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+        if (previousRecursionDepth >= 100) {
+            throw new globalThis.Error("protobuf decode recursion limit exceeded");
+        }
+        (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+        try {
+            const end = length === undefined ? reader.len : reader.pos + length;
+            const message = createBaseLogOutUserResponse();
+            while (reader.pos < end) {
+                const tag = reader.uint32();
+                switch (tag >>> 3) {
+                    case 1: {
+                        if (tag !== 8) {
+                            break;
+                        }
+
+                        message.loggedOut = reader.bool();
+                        continue;
+                    }
+                }
+                if ((tag & 7) === 4 || tag === 0) {
+                    break;
+                }
+                reader.skip(tag & 7);
+            }
+            return message;
+        } finally {
+            (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+        }
+    },
+
+    fromJSON(object: any): LogOutUserResponse {
+        return {
+            loggedOut: isSet(object.loggedOut)
+                ? globalThis.Boolean(object.loggedOut)
+                : isSet(object.logged_out)
+                  ? globalThis.Boolean(object.logged_out)
+                  : false
+        };
+    },
+
+    toJSON(message: LogOutUserResponse): unknown {
+        const obj: any = {};
+        if (message.loggedOut !== false) {
+            obj.loggedOut = message.loggedOut;
+        }
+        return obj;
+    },
+
+    create<I extends Exact<DeepPartial<LogOutUserResponse>, I>>(base?: I): LogOutUserResponse {
+        return LogOutUserResponse.fromPartial(base ?? ({} as any));
+    },
+    fromPartial<I extends Exact<DeepPartial<LogOutUserResponse>, I>>(object: I): LogOutUserResponse {
+        const message = createBaseLogOutUserResponse();
+        message.loggedOut = object.loggedOut ?? false;
         return message;
     }
 };
@@ -743,6 +936,16 @@ export const AuthenticationServiceService = {
             Buffer.from(SoftValidateJwtResponse.encode(value).finish()),
         responseDeserialize: (value: Buffer): SoftValidateJwtResponse => SoftValidateJwtResponse.decode(value)
     },
+    logOutUser: {
+        path: "/authentication.AuthenticationService/LogOutUser" as const,
+        requestStream: false as const,
+        responseStream: false as const,
+        requestSerialize: (value: LogOutUserRequest): Buffer => Buffer.from(LogOutUserRequest.encode(value).finish()),
+        requestDeserialize: (value: Buffer): LogOutUserRequest => LogOutUserRequest.decode(value),
+        responseSerialize: (value: LogOutUserResponse): Buffer =>
+            Buffer.from(LogOutUserResponse.encode(value).finish()),
+        responseDeserialize: (value: Buffer): LogOutUserResponse => LogOutUserResponse.decode(value)
+    },
     deleteUser: {
         path: "/authentication.AuthenticationService/DeleteUser" as const,
         requestStream: false as const,
@@ -758,6 +961,7 @@ export const AuthenticationServiceService = {
 export interface AuthenticationServiceServer extends UntypedServiceImplementation {
     signInUser: handleUnaryCall<SignInUserRequest, SignInUserResponse>;
     softValidateJwt: handleUnaryCall<SoftValidateJwtRequest, SoftValidateJwtResponse>;
+    logOutUser: handleUnaryCall<LogOutUserRequest, LogOutUserResponse>;
     deleteUser: handleUnaryCall<DeleteUserRequest, DeleteUserResponse>;
 }
 
@@ -791,6 +995,21 @@ export interface AuthenticationServiceClient extends Client {
         metadata: Metadata,
         options: Partial<CallOptions>,
         callback: (error: ServiceError | null, response: SoftValidateJwtResponse) => void
+    ): ClientUnaryCall;
+    logOutUser(
+        request: LogOutUserRequest,
+        callback: (error: ServiceError | null, response: LogOutUserResponse) => void
+    ): ClientUnaryCall;
+    logOutUser(
+        request: LogOutUserRequest,
+        metadata: Metadata,
+        callback: (error: ServiceError | null, response: LogOutUserResponse) => void
+    ): ClientUnaryCall;
+    logOutUser(
+        request: LogOutUserRequest,
+        metadata: Metadata,
+        options: Partial<CallOptions>,
+        callback: (error: ServiceError | null, response: LogOutUserResponse) => void
     ): ClientUnaryCall;
     deleteUser(
         request: DeleteUserRequest,
