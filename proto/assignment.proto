@@ -1,0 +1,75 @@
+syntax = "proto3";
+
+package assignment;
+import "google/protobuf/timestamp.proto";
+
+// Every request carries the user_id of the verified caller (set by the gateway from the JWT, never by the client).
+// Rows owned by another user are reported as NOT_FOUND.
+
+message Semester {
+    string id = 1;
+    string name = 2;
+    string start_date = 3; // "YYYY-MM-DD"
+    string end_date = 4; // "YYYY-MM-DD", on or after start_date
+    google.protobuf.Timestamp created_at = 5;
+    google.protobuf.Timestamp updated_at = 6;
+}
+
+message CreateSemesterRequest {
+    string user_id = 1;
+    string name = 2;
+    string start_date = 3;
+    string end_date = 4;
+}
+
+message CreateSemesterResponse {
+    Semester semester = 1;
+}
+
+message ListSemestersRequest {
+    string user_id = 1;
+}
+
+message ListSemestersResponse {
+    repeated Semester semesters = 1; // newest start_date first
+}
+
+message GetSemesterRequest {
+    string user_id = 1;
+    string semester_id = 2;
+}
+
+message GetSemesterResponse {
+    Semester semester = 1;
+}
+
+// Partial update: only the fields that are set are changed
+message UpdateSemesterRequest {
+    string user_id = 1;
+    string semester_id = 2;
+    optional string name = 3;
+    optional string start_date = 4;
+    optional string end_date = 5;
+}
+
+message UpdateSemesterResponse {
+    Semester semester = 1;
+}
+
+// Also deletes the semester's classes and their assignments (ON DELETE CASCADE)
+message DeleteSemesterRequest {
+    string user_id = 1;
+    string semester_id = 2;
+}
+
+message DeleteSemesterResponse {
+    bool deleted = 1;
+}
+
+service SemesterService {
+    rpc CreateSemester (CreateSemesterRequest) returns (CreateSemesterResponse);
+    rpc ListSemesters (ListSemestersRequest) returns (ListSemestersResponse);
+    rpc GetSemester (GetSemesterRequest) returns (GetSemesterResponse);
+    rpc UpdateSemester (UpdateSemesterRequest) returns (UpdateSemesterResponse);
+    rpc DeleteSemester (DeleteSemesterRequest) returns (DeleteSemesterResponse);
+}
