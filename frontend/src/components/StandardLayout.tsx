@@ -11,7 +11,7 @@ import StandardNavbar from "./StandardNavbar";
 interface StandardLayoutProps {
     title: string;
     sidebar: SidebarComponentProps[];
-    children: React.ReactNode;
+    children?: React.ReactNode;
 }
 
 const StandardLayout = ({ title, sidebar, children }: StandardLayoutProps) => {

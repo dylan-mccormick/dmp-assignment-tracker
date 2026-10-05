@@ -10,6 +10,7 @@ import ComposeProviders from "./ComposeProviders";
 import BannerContextProvider from "./context/BannerContextProvider";
 import LoadingBannerContextProvider from "./context/LoadingBannerContextProvider";
 import ModalContextProvider from "./context/ModalContextProvider";
+import Dashboard from "./pages/Dashboard";
 import Login from "./pages/Login";
 import PageNotFound from "./pages/PageNotFound";
 
@@ -24,6 +25,10 @@ const App = () => {
                         <Route
                             path="/login"
                             element={<Login />}
+                        />
+                        <Route
+                            path="/dashboard"
+                            element={<Dashboard />}
                         />
                         <Route
                             path="*"
