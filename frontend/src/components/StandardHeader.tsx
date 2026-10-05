@@ -4,6 +4,8 @@
 import { Menu } from "lucide-react";
 import { Link } from "react-router";
 
+import HeaderUserMenu from "./HeaderUserMenu";
+
 interface StandardHeaderProps {
     hideNavbar?: boolean;
     setNavOpen: (_: (b: boolean) => boolean) => void;
@@ -43,7 +45,9 @@ const StandardHeader = ({ hideNavbar, setNavOpen }: StandardHeaderProps) => {
                 </div>
 
                 {/* Right */}
-                <div className="flex items-center gap-2 h-16"></div>
+                <div className="flex items-center gap-2 h-16 min-w-0">
+                    <HeaderUserMenu />
+                </div>
             </header>
         </>
     );
