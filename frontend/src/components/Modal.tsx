@@ -1,25 +1,44 @@
 // Modal.tsx
-// Renders the current ModalContext modal over the page
+// Renders the current ModalContext modal over the page, scaling in on open and out on close
 
 import { LoaderCircle } from "lucide-react";
-import { useContext } from "react";
+import { type TransitionEvent, useContext, useState } from "react";
 
-import { ModalContext } from "../context/ModalContext";
+import { type ModalConfig, ModalContext } from "../context/ModalContext";
 import PrimaryButton from "./PrimaryButton";
 import SecondaryButton from "./SecondaryButton";
 
 const Modal = () => {
-    const { modal, closeModal } = useContext(ModalContext);
+    const { modal: current, closeModal } = useContext(ModalContext);
 
-    if (!modal) return null;
+    // Keep showing the last modal after closeModal() so it can animate out; switching straight to another modal
+    // (e.g. confirm -> "please wait") swaps the content in place
+    const [displayed, setDisplayed] = useState<ModalConfig | undefined>(current);
+    const [previous, setPrevious] = useState(current);
+    if (current !== previous) {
+        setPrevious(current);
+        if (current) setDisplayed(current);
+    }
+
+    const closing = !current && displayed !== undefined;
+    const modal = displayed;
+
+    // With reduced motion there's no transition to wait for
+    if (!modal || (closing && window.matchMedia("(prefers-reduced-motion: reduce)").matches)) return null;
+
+    const handleTransitionEnd = (e: TransitionEvent<HTMLDivElement>) => {
+        if (closing && e.target === e.currentTarget && e.propertyName === "opacity") setDisplayed(undefined);
+    };
 
     return (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center">
+        <div
+            onTransitionEnd={handleTransitionEnd}
+            className={`fixed inset-0 bg-black/50 z-50 flex items-center justify-center transition-opacity duration-150 ease-out starting:opacity-0 motion-reduce:transition-none ${closing ? "opacity-0 pointer-events-none" : "opacity-100"}`}>
             <div
                 role="dialog"
                 aria-modal="true"
                 aria-labelledby="modal-title"
-                className="bg-white rounded-lg p-6 max-w-sm w-full mx-4 shadow-xl">
+                className={`bg-white rounded-lg p-6 max-w-sm w-full mx-4 shadow-xl transition-transform duration-150 ease-out starting:scale-90 motion-reduce:transition-none ${closing ? "scale-90" : "scale-100"}`}>
                 <h2
                     id="modal-title"
                     className="text-lg font-bold mb-2">
