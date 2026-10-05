@@ -17,9 +17,9 @@ const PageNotFound = () => {
         <StandardLayout
             title="Page Not Found"
             sidebar={[]}>
-            <main className="text-center p-4">
-                <h1 className="text-2xl font-bold mb-4">404 - Page Not Found</h1>
-                <p className="text-gray-700 mb-2">
+            <main className="flex flex-col items-center justify-center h-full text-center">
+                <h1 className="text-3xl font-extralight mb-8">404 - Page Not Found</h1>
+                <p className="text-gray-600 mb-4">
                     The page you are looking for does not exist. Please check the URL and try again.
                 </p>
                 <TertiaryButton onClick={goBack}>Go Back</TertiaryButton>
