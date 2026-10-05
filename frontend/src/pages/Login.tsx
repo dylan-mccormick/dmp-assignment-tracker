@@ -103,6 +103,11 @@ const Login = () => {
                 title="Login"
                 sidebar={[]}>
                 <div className="flex flex-col items-center justify-center h-full">
+                    <img
+                        className="w-24 h-24 mb-8"
+                        alt="DMP Service Logo"
+                        src="https://cdn.mnmzc.dev/logos/dmp-black.png"
+                    />
                     <h1 className="text-3xl font-extralight mb-8">Login</h1>
                     <PrimaryButton onClick={() => googleLogin()}>Sign in with Google</PrimaryButton>
                 </div>
