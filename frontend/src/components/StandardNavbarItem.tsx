@@ -1,7 +1,7 @@
 // StandardNavbarItem.tsx
-// A single clickable navigation item
+// A single clickable navigation item, bold when its route is the current page
 
-import { useNavigate } from "react-router";
+import { NavLink } from "react-router";
 
 interface StandardNavbarItemProps {
     icon: React.ReactNode;
@@ -10,19 +10,15 @@ interface StandardNavbarItemProps {
 }
 
 const StandardNavbarItem = ({ icon, label, href }: StandardNavbarItemProps) => {
-    const navigate = useNavigate();
-
-    const handleClick = () => {
-        navigate(href);
-    };
-
     return (
-        <button
-            onClick={handleClick}
-            className="flex items-center p-2 text-sm font-medium hover:bg-gray-100">
+        <NavLink
+            to={href}
+            className={({ isActive }) =>
+                `flex items-center p-2 text-sm hover:bg-gray-100 ${isActive ? "font-bold" : "font-medium"}`
+            }>
             {icon}
             <span className="ml-3">{label}</span>
-        </button>
+        </NavLink>
     );
 };
 
