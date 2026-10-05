@@ -42,6 +42,15 @@ const grpcImpl = (authService: AuthService): AuthenticationServiceServer => {
                 .catch(err => handleMicroserviceError(err, callback));
         },
 
+        getUser(call, callback) {
+            const { userId } = call.request;
+
+            authService
+                .getUser(userId)
+                .then(({ user }) => callback(null, { user }))
+                .catch(err => handleMicroserviceError(err, callback));
+        },
+
         deleteUser(call, callback) {
             const { userId } = call.request;
 

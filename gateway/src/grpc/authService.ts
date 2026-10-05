@@ -33,6 +33,7 @@ const authService = {
     signInUser: unary(client.signInUser),
     softValidateJwt: unary(client.softValidateJwt),
     logOutUser: unary(client.logOutUser),
+    getUser: unary(client.getUser),
     deleteUser: unary(client.deleteUser)
 };
 

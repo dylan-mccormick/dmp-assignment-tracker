@@ -43,6 +43,14 @@ message LogOutUserResponse {
     bool logged_out = 1;
 }
 
+message GetUserRequest {
+    string user_id = 1;
+}
+
+message GetUserResponse {
+    User user = 1;
+}
+
 message DeleteUserRequest {
     string user_id = 1;
 }
@@ -55,5 +63,6 @@ service AuthenticationService {
     rpc SignInUser (SignInUserRequest) returns (SignInUserResponse);
     rpc SoftValidateJwt (SoftValidateJwtRequest) returns (SoftValidateJwtResponse);
     rpc LogOutUser (LogOutUserRequest) returns (LogOutUserResponse);
+    rpc GetUser (GetUserRequest) returns (GetUserResponse);
     rpc DeleteUser (DeleteUserRequest) returns (DeleteUserResponse);
 }
