@@ -4,6 +4,7 @@
 import { GoogleOAuthProvider } from "@react-oauth/google";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router";
 
+import Banner from "./components/Banner";
 import LoadingBanner from "./components/LoadingBanner";
 import Modal from "./components/Modal";
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -27,6 +28,7 @@ const App = () => {
             ]}>
             <LoadingBanner />
             <Modal />
+            <Banner />
             <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID}>
                 <BrowserRouter>
                     <Routes>

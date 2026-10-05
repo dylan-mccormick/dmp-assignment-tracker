@@ -3,7 +3,6 @@
 
 import { useState } from "react";
 
-import Banner from "./Banner";
 import StandardHeader from "./StandardHeader";
 import type { SidebarComponentProps } from "./StandardNavbar";
 import StandardNavbar from "./StandardNavbar";
@@ -31,10 +30,7 @@ const StandardLayout = ({ title, sidebar, children }: StandardLayoutProps) => {
                 {sidebar.length > 0 && navOpen && <StandardNavbar items={sidebar} />}
 
                 <div className="flex flex-col flex-1 overflow-y-auto p-4 min-h-full">
-                    <div className="flex-1">
-                        <Banner />
-                        {children}
-                    </div>
+                    <div className="flex-1">{children}</div>
 
                     <footer className="w-full h-16 border-t border-gray-300 flex items-center justify-center px-4 pt-4 mt-4 text-sm text-gray-600">
                         <p>&copy; 2026 Dylan McCormick. All rights reserved.</p>
