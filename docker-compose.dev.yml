@@ -26,6 +26,7 @@ services:
             context: .
             dockerfile: ./gateway/Dockerfile
         environment:
+            PORT: 8080
             CI: true
             NODE_ENV: development
             JWT_SECRET: ${JWT_SECRET}

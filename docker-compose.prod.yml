@@ -32,6 +32,7 @@ services:
         restart: unless-stopped
         logging: *default-logging
         environment:
+            PORT: 8080
             NODE_ENV: production
             JWT_SECRET: ${JWT_SECRET}
             AUTH_SERVICE_URL: auth-service:50051
