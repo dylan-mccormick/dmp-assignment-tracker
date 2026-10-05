@@ -11,7 +11,10 @@ CREATE TABLE IF NOT EXISTS semesters (
     user_id UUID NOT NULL,
     name TEXT NOT NULL,
     start_date DATE NOT NULL,
-    end_date DATE NOT NULL
+    end_date DATE NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CONSTRAINT semesters_end_after_start CHECK (end_date >= start_date)
 );
 
 CREATE TABLE IF NOT EXISTS classes (
@@ -19,7 +22,9 @@ CREATE TABLE IF NOT EXISTS classes (
     semester_id UUID NOT NULL REFERENCES semesters(id) ON DELETE CASCADE,
     user_id UUID NOT NULL, -- denormalized for easier querying
     name TEXT NOT NULL,
-    code TEXT NOT NULL
+    code TEXT NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE TABLE IF NOT EXISTS assignments (
