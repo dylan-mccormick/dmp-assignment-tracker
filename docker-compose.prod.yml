@@ -39,7 +39,7 @@ services:
             ASSIGNMENT_SERVICE_URL: assignment-service:50052
             REDIS_URL: redis://redis:6379
         ports:
-            - 15008:8080   # only service besides frontend exposed to the host
+            - 15009:8080   # only service besides frontend exposed to the host
 
     auth-service:
         image: ghcr.io/dylan-mccormick/auth-service:latest
