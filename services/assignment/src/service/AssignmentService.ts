@@ -13,6 +13,7 @@ export interface AssignmentCreate {
     earlyDue?: Date;
     due?: Date;
     lateDue?: Date;
+    notes: string;
 }
 
 export interface AssignmentUpdate {
@@ -23,6 +24,7 @@ export interface AssignmentUpdate {
     earlyDue?: Date;
     due?: Date;
     lateDue?: Date;
+    notes?: string;
     clearEarlyDue: boolean;
     clearLateDue: boolean;
 }
@@ -63,8 +65,8 @@ export interface AssignmentService {
      * @param userId The owner of the assignment
      * @param props The assignment's class, type, name, done flag and deadlines
      * @returns The created assignment
-     * @throws {MicroserviceError} INVALID_ARGUMENT for an empty/long name, an unknown type, a missing due date or
-     *   out-of-order deadlines, NOT_FOUND if the class isn't the user's
+     * @throws {MicroserviceError} INVALID_ARGUMENT for an empty/long name, an unknown type, a missing due date,
+     *   out-of-order deadlines or overlong notes, NOT_FOUND if the class isn't the user's
      */
     createAssignment(userId: string, props: AssignmentCreate): Promise<{ assignment: Assignment }>;
 

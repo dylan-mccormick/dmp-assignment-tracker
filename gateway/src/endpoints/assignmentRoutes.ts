@@ -12,12 +12,14 @@ import requireAuth, { getAuthUser } from "../middleware/requireAuth";
 const TIMESTAMP_PATTERN = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}:\d{2})$/;
 
 const STRING_FIELDS = ["classId", "typeId", "name"] as const;
+const OPTIONAL_STRING_FIELDS = ["notes"] as const;
 const DEADLINE_FIELDS = ["earlyDue", "lateDue"] as const;
 
 interface AssignmentFields {
     classId?: string;
     typeId?: string;
     name?: string;
+    notes?: string;
     done?: boolean;
     // the generated request types require these keys (as Date | undefined) rather than making them optional
     earlyDue: Date | undefined;
@@ -37,6 +39,7 @@ const toPublicAssignment = (assignment: Assignment) => ({
     earlyDue: assignment.earlyDue ?? null,
     due: assignment.due,
     lateDue: assignment.lateDue ?? null,
+    notes: assignment.notes,
     createdAt: assignment.createdAt,
     updatedAt: assignment.updatedAt
 });
@@ -82,6 +85,13 @@ const readFields = (req: Request, { create }: { create: boolean }): AssignmentFi
     for (const field of STRING_FIELDS) {
         const value = body[field];
         if (value === undefined && !create) continue;
+        if (typeof value !== "string") throw new HttpError(400, `"${field}" must be a string.`);
+        fields[field] = value;
+    }
+
+    for (const field of OPTIONAL_STRING_FIELDS) {
+        const value = body[field];
+        if (value === undefined) continue;
         if (typeof value !== "string") throw new HttpError(400, `"${field}" must be a string.`);
         fields[field] = value;
     }
@@ -132,10 +142,10 @@ const assignmentRoutes = (router: Router) => {
         res.json({ assignments: assignments.map(toPublicAssignment) });
     });
 
-    // Creates an assignment: { classId, typeId, name, due, done?, earlyDue?, lateDue? } (ISO timestamps)
+    // Creates an assignment: { classId, typeId, name, due, done?, earlyDue?, lateDue?, notes? } (ISO timestamps)
     router.post("/", async (req, res) => {
         // with create: true, readFields has required (and so set) the string fields and due
-        const { classId, typeId, name, done, earlyDue, due, lateDue } = readFields(req, { create: true });
+        const { classId, typeId, name, notes, done, earlyDue, due, lateDue } = readFields(req, { create: true });
         const { assignment } = await assignmentService.createAssignment({
             userId: getAuthUser(res).id,
             classId: classId!,
@@ -144,7 +154,8 @@ const assignmentRoutes = (router: Router) => {
             done: done ?? false,
             earlyDue,
             due,
-            lateDue
+            lateDue,
+            notes: notes ?? ""
         });
         res.status(201).json({ assignment: requireAssignment(assignment) });
     });

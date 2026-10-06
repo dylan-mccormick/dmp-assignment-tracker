@@ -184,7 +184,11 @@ export interface Assignment {
   /** unset when late submissions aren't accepted */
   lateDue: Date | undefined;
   createdAt: Date | undefined;
-  updatedAt: Date | undefined;
+  updatedAt:
+    | Date
+    | undefined;
+  /** free-form, "" when there are none */
+  notes: string;
 }
 
 export interface ListAssignmentTypesRequest {
@@ -208,6 +212,7 @@ export interface CreateAssignmentRequest {
   /** required */
   due: Date | undefined;
   lateDue: Date | undefined;
+  notes: string;
 }
 
 export interface CreateAssignmentResponse {
@@ -260,6 +265,7 @@ export interface UpdateAssignmentRequest {
   lateDue: Date | undefined;
   clearEarlyDue: boolean;
   clearLateDue: boolean;
+  notes?: string | undefined;
 }
 
 export interface UpdateAssignmentResponse {
@@ -2466,6 +2472,7 @@ function createBaseAssignment(): Assignment {
     lateDue: undefined,
     createdAt: undefined,
     updatedAt: undefined,
+    notes: "",
   };
 }
 
@@ -2500,6 +2507,9 @@ export const Assignment: MessageFns<Assignment> = {
     }
     if (message.updatedAt !== undefined) {
       Timestamp.encode(toTimestamp(message.updatedAt), writer.uint32(82).fork()).join();
+    }
+    if (message.notes !== "") {
+      writer.uint32(90).string(message.notes);
     }
     return writer;
   },
@@ -2597,6 +2607,14 @@ export const Assignment: MessageFns<Assignment> = {
             message.updatedAt = fromTimestamp(Timestamp.decode(reader, reader.uint32()));
             continue;
           }
+          case 11: {
+            if (tag !== 90) {
+              break;
+            }
+
+            message.notes = reader.string();
+            continue;
+          }
         }
         if ((tag & 7) === 4 || tag === 0) {
           break;
@@ -2645,6 +2663,7 @@ export const Assignment: MessageFns<Assignment> = {
         : isSet(object.updated_at)
         ? fromJsonTimestamp(object.updated_at)
         : undefined,
+      notes: isSet(object.notes) ? globalThis.String(object.notes) : "",
     };
   },
 
@@ -2680,6 +2699,9 @@ export const Assignment: MessageFns<Assignment> = {
     if (message.updatedAt !== undefined) {
       obj.updatedAt = message.updatedAt.toISOString();
     }
+    if (message.notes !== "") {
+      obj.notes = message.notes;
+    }
     return obj;
   },
 
@@ -2698,6 +2720,7 @@ export const Assignment: MessageFns<Assignment> = {
     message.lateDue = object.lateDue ?? undefined;
     message.createdAt = object.createdAt ?? undefined;
     message.updatedAt = object.updatedAt ?? undefined;
+    message.notes = object.notes ?? "";
     return message;
   },
 };
@@ -2833,6 +2856,7 @@ function createBaseCreateAssignmentRequest(): CreateAssignmentRequest {
     earlyDue: undefined,
     due: undefined,
     lateDue: undefined,
+    notes: "",
   };
 }
 
@@ -2861,6 +2885,9 @@ export const CreateAssignmentRequest: MessageFns<CreateAssignmentRequest> = {
     }
     if (message.lateDue !== undefined) {
       Timestamp.encode(toTimestamp(message.lateDue), writer.uint32(66).fork()).join();
+    }
+    if (message.notes !== "") {
+      writer.uint32(74).string(message.notes);
     }
     return writer;
   },
@@ -2942,6 +2969,14 @@ export const CreateAssignmentRequest: MessageFns<CreateAssignmentRequest> = {
             message.lateDue = fromTimestamp(Timestamp.decode(reader, reader.uint32()));
             continue;
           }
+          case 9: {
+            if (tag !== 74) {
+              break;
+            }
+
+            message.notes = reader.string();
+            continue;
+          }
         }
         if ((tag & 7) === 4 || tag === 0) {
           break;
@@ -2984,6 +3019,7 @@ export const CreateAssignmentRequest: MessageFns<CreateAssignmentRequest> = {
         : isSet(object.late_due)
         ? fromJsonTimestamp(object.late_due)
         : undefined,
+      notes: isSet(object.notes) ? globalThis.String(object.notes) : "",
     };
   },
 
@@ -3013,6 +3049,9 @@ export const CreateAssignmentRequest: MessageFns<CreateAssignmentRequest> = {
     if (message.lateDue !== undefined) {
       obj.lateDue = message.lateDue.toISOString();
     }
+    if (message.notes !== "") {
+      obj.notes = message.notes;
+    }
     return obj;
   },
 
@@ -3029,6 +3068,7 @@ export const CreateAssignmentRequest: MessageFns<CreateAssignmentRequest> = {
     message.earlyDue = object.earlyDue ?? undefined;
     message.due = object.due ?? undefined;
     message.lateDue = object.lateDue ?? undefined;
+    message.notes = object.notes ?? "";
     return message;
   },
 };
@@ -3477,6 +3517,7 @@ function createBaseUpdateAssignmentRequest(): UpdateAssignmentRequest {
     lateDue: undefined,
     clearEarlyDue: false,
     clearLateDue: false,
+    notes: undefined,
   };
 }
 
@@ -3514,6 +3555,9 @@ export const UpdateAssignmentRequest: MessageFns<UpdateAssignmentRequest> = {
     }
     if (message.clearLateDue !== false) {
       writer.uint32(88).bool(message.clearLateDue);
+    }
+    if (message.notes !== undefined) {
+      writer.uint32(98).string(message.notes);
     }
     return writer;
   },
@@ -3619,6 +3663,14 @@ export const UpdateAssignmentRequest: MessageFns<UpdateAssignmentRequest> = {
             message.clearLateDue = reader.bool();
             continue;
           }
+          case 12: {
+            if (tag !== 98) {
+              break;
+            }
+
+            message.notes = reader.string();
+            continue;
+          }
         }
         if ((tag & 7) === 4 || tag === 0) {
           break;
@@ -3676,6 +3728,7 @@ export const UpdateAssignmentRequest: MessageFns<UpdateAssignmentRequest> = {
         : isSet(object.clear_late_due)
         ? globalThis.Boolean(object.clear_late_due)
         : false,
+      notes: isSet(object.notes) ? globalThis.String(object.notes) : undefined,
     };
   },
 
@@ -3714,6 +3767,9 @@ export const UpdateAssignmentRequest: MessageFns<UpdateAssignmentRequest> = {
     if (message.clearLateDue !== false) {
       obj.clearLateDue = message.clearLateDue;
     }
+    if (message.notes !== undefined) {
+      obj.notes = message.notes;
+    }
     return obj;
   },
 
@@ -3733,6 +3789,7 @@ export const UpdateAssignmentRequest: MessageFns<UpdateAssignmentRequest> = {
     message.lateDue = object.lateDue ?? undefined;
     message.clearEarlyDue = object.clearEarlyDue ?? false;
     message.clearLateDue = object.clearLateDue ?? false;
+    message.notes = object.notes ?? undefined;
     return message;
   },
 };

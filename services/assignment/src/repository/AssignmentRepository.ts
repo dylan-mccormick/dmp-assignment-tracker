@@ -12,6 +12,7 @@ export interface AssignmentProps {
     earlyDue?: Date;
     due: Date;
     lateDue?: Date;
+    notes: string;
 }
 
 export interface AssignmentFilter {

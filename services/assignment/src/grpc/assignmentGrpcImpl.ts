@@ -15,10 +15,10 @@ const assignmentGrpcImpl = (assignmentService: AssignmentService): AssignmentSer
         },
 
         createAssignment(call, callback) {
-            const { userId, classId, typeId, name, done, earlyDue, due, lateDue } = call.request;
+            const { userId, classId, typeId, name, done, earlyDue, due, lateDue, notes } = call.request;
 
             assignmentService
-                .createAssignment(userId, { classId, typeId, name, done, earlyDue, due, lateDue })
+                .createAssignment(userId, { classId, typeId, name, done, earlyDue, due, lateDue, notes })
                 .then(({ assignment }) => callback(null, { assignment }))
                 .catch(err => handleMicroserviceError(err, callback));
         },

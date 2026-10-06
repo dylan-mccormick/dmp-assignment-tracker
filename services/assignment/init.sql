@@ -43,6 +43,7 @@ CREATE TABLE IF NOT EXISTS assignments (
     early_due TIMESTAMPTZ,
     due TIMESTAMPTZ NOT NULL,
     late_due TIMESTAMPTZ,
+    notes TEXT NOT NULL DEFAULT '', -- free-form, possibly long; '' when there are none
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     -- the optional early and late deadlines bracket the main one (NULL comparisons pass the CHECK)

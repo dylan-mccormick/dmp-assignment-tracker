@@ -10,6 +10,7 @@ import { AssignmentFilter, AssignmentProps, AssignmentRepository } from "../repo
 import { AssignmentCreate, AssignmentService, AssignmentUpdate } from "./AssignmentService";
 
 const MAX_NAME_LENGTH = 200;
+const MAX_NOTES_LENGTH = 10_000;
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 const invalid = (userFacingMessage: string) =>
@@ -46,6 +47,8 @@ const validate = (props: Omit<AssignmentProps, "due"> & { due?: Date }): Assignm
         throw invalid("The late deadline isn't a valid date.");
     if (props.earlyDue && props.earlyDue > props.due) throw invalid("The early deadline can't be after the due date.");
     if (props.lateDue && props.lateDue < props.due) throw invalid("The late deadline can't be before the due date.");
+    // notes keep their whitespace (e.g. indented lists); only the length is limited
+    if (props.notes.length > MAX_NOTES_LENGTH) throw invalid(`Notes can be at most ${MAX_NOTES_LENGTH} characters.`);
 
     return { ...props, name, due: props.due };
 };
@@ -125,7 +128,8 @@ export class AssignmentServiceImpl implements AssignmentService {
             done: update.done ?? existing.done,
             earlyDue: clearEarlyDue ? undefined : (update.earlyDue ?? existing.earlyDue),
             due: update.due ?? existing.due,
-            lateDue: clearLateDue ? undefined : (update.lateDue ?? existing.lateDue)
+            lateDue: clearLateDue ? undefined : (update.lateDue ?? existing.lateDue),
+            notes: update.notes ?? existing.notes
         });
 
         const assignment = await this.repository.updateAssignment(userId, assignmentId, props);

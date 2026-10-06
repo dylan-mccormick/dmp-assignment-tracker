@@ -168,6 +168,7 @@ message Assignment {
     google.protobuf.Timestamp late_due = 8; // unset when late submissions aren't accepted
     google.protobuf.Timestamp created_at = 9;
     google.protobuf.Timestamp updated_at = 10;
+    string notes = 11; // free-form, "" when there are none
 }
 
 message ListAssignmentTypesRequest {}
@@ -186,6 +187,7 @@ message CreateAssignmentRequest {
     google.protobuf.Timestamp early_due = 6;
     google.protobuf.Timestamp due = 7; // required
     google.protobuf.Timestamp late_due = 8;
+    string notes = 9;
 }
 
 message CreateAssignmentResponse {
@@ -230,6 +232,7 @@ message UpdateAssignmentRequest {
     google.protobuf.Timestamp late_due = 9;
     bool clear_early_due = 10;
     bool clear_late_due = 11;
+    optional string notes = 12;
 }
 
 message UpdateAssignmentResponse {

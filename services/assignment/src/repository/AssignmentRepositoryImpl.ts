@@ -21,6 +21,7 @@ const rowToAssignment = (row: any): Assignment => ({
     earlyDue: row.early_due ?? undefined,
     due: row.due,
     lateDue: row.late_due ?? undefined,
+    notes: row.notes,
     createdAt: row.created_at,
     updatedAt: row.updated_at
 });
@@ -124,8 +125,8 @@ export class AssignmentRepositoryImpl implements AssignmentRepository {
         try {
             // Inserts nothing unless the class is the user's
             const result = await this.pool.query(
-                `INSERT INTO assignments (id, class_id, user_id, type_id, name, done, early_due, due, late_due)
-                SELECT $1, c.id, c.user_id, $2, $3, $4, $5, $6, $7 FROM classes c WHERE c.id = $8 AND c.user_id = $9
+                `INSERT INTO assignments (id, class_id, user_id, type_id, name, done, early_due, due, late_due, notes)
+                SELECT $1, c.id, c.user_id, $2, $3, $4, $5, $6, $7, $10 FROM classes c WHERE c.id = $8 AND c.user_id = $9
                 RETURNING *`,
                 [
                     uuidv7(),
@@ -136,7 +137,8 @@ export class AssignmentRepositoryImpl implements AssignmentRepository {
                     props.due,
                     props.lateDue ?? null,
                     props.classId,
-                    userId
+                    userId,
+                    props.notes
                 ]
             );
             return result.rows[0] ? rowToAssignment(result.rows[0]) : undefined;
@@ -156,7 +158,7 @@ export class AssignmentRepositoryImpl implements AssignmentRepository {
             // Updates nothing unless both the assignment and the target class are the user's
             const result = await this.pool.query(
                 `UPDATE assignments a SET class_id = c.id, type_id = $1, name = $2, done = $3, early_due = $4, due = $5,
-                    late_due = $6, updated_at = NOW()
+                    late_due = $6, notes = $10, updated_at = NOW()
                 FROM classes c
                 WHERE a.id = $7 AND a.user_id = $8 AND c.id = $9 AND c.user_id = $8
                 RETURNING a.*`,
@@ -169,7 +171,8 @@ export class AssignmentRepositoryImpl implements AssignmentRepository {
                     props.lateDue ?? null,
                     assignmentId,
                     userId,
-                    props.classId
+                    props.classId,
+                    props.notes
                 ]
             );
             return result.rows[0] ? rowToAssignment(result.rows[0]) : undefined;
