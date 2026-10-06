@@ -3,9 +3,12 @@
 
 import { Pool, types } from "pg";
 
-import { SemesterServiceService } from "./generated/assignment";
+import { ClassServiceService, SemesterServiceService } from "./generated/assignment";
+import classGrpcImpl from "./grpc/classGrpcImpl";
 import semesterGrpcImpl from "./grpc/semesterGrpcImpl";
+import { ClassRepositoryImpl } from "./repository/ClassRepositoryImpl";
 import { SemesterRepositoryImpl } from "./repository/SemesterRepositoryImpl";
+import { ClassServiceImpl } from "./service/ClassServiceImpl";
 import { SemesterServiceImpl } from "./service/SemesterServiceImpl";
 import startServer from "./startServer";
 
@@ -21,12 +24,17 @@ const main = async () => {
 
     // Initialize Repositories
     const semesterRepository = new SemesterRepositoryImpl(dbPool);
+    const classRepository = new ClassRepositoryImpl(dbPool);
 
     // Initialize Services
     const semesterService = new SemesterServiceImpl(semesterRepository);
+    const classService = new ClassServiceImpl(classRepository);
 
     // Register each generated *Service definition with its grpcImpl
-    startServer([{ definition: SemesterServiceService, implementation: semesterGrpcImpl(semesterService) }]);
+    startServer([
+        { definition: SemesterServiceService, implementation: semesterGrpcImpl(semesterService) },
+        { definition: ClassServiceService, implementation: classGrpcImpl(classService) }
+    ]);
 };
 
 main().catch(err => {
