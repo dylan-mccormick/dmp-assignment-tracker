@@ -60,7 +60,7 @@ Only the gateway and frontend are exposed to the host in prod. In compose, the f
 
 ### Protobuf / gRPC
 
-`proto/*.proto` is the source of truth. Currently only `authentication.proto` (`AuthenticationService`) exists; `assignment.proto` and `stats.proto` still need to be written. Generated code (ts-proto with `outputServices=grpc-js`) is committed to each package under `src/generated/`, so after editing a `.proto` you must regenerate it in **every** package (gateway and each service). Never hand-edit `src/generated/`. ts-proto converts snake_case fields to camelCase (`google_auth_token` → `googleAuthToken`).
+`proto/*.proto` is the source of truth. `authentication.proto` has `AuthenticationService`, and `assignment.proto` has `SemesterService` and `ClassService` (assignments still to come); `stats.proto` still needs to be written. Generated code (ts-proto with `outputServices=grpc-js`) is committed to each package under `src/generated/`, so after editing a `.proto` you must regenerate it in **every** package (gateway and each service). Never hand-edit `src/generated/`. ts-proto converts snake_case fields to camelCase (`google_auth_token` → `googleAuthToken`).
 
 ### Backend service layering
 
@@ -131,7 +131,7 @@ The schemas live in `services/<name>/init.sql`.
 
 - Gateway: WebSockets for notifications.
 - The stats, notification, and assignment packages don't build yet. Their generated code needs `@grpc/grpc-js` and `@types/node`, which they don't depend on. The old `services/*-service/` folders (just `node_modules`/`.pnpm-store`) are leftovers from the folder rename and can be deleted.
-- `assignment.proto`, `stats.proto`, and the Assignment Service gRPC server and repository.
+- `stats.proto`, and the assignment parts of `assignment.proto` and the Assignment Service.
 - Stats aggregation logic.
 - Notification: the push mechanism, the notifications table, and the scheduled reminders.
 - **Account deletion: a 30-day grace period, then permanent deletion.** Signing in during the grace period restores the account (today that works with no time limit). After 30 days, a scheduled purge in auth-service hard-deletes the user and publishes `user.deleted` on RabbitMQ. Then the assignment service deletes their semesters (which cascade to classes and assignments), the stats service drops their cache, and the notification service deletes their notifications, with each consumer idempotent. Signing in after the purge creates a fresh account.

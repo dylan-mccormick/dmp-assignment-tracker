@@ -2,16 +2,13 @@
 // Implementation of the SemesterRepository
 
 import { status } from "@grpc/grpc-js";
-import { DatabaseError, Pool } from "pg";
+import { Pool } from "pg";
 import { v7 as uuidv7 } from "uuid";
 
 import { MicroserviceError } from "../error/MicroserviceError";
 import { Semester } from "../generated/assignment";
+import { CHECK_VIOLATION, INVALID_TEXT_REPRESENTATION, isDatabaseError, UNIQUE_VIOLATION } from "./databaseErrors";
 import { SemesterProps, SemesterRepository } from "./SemesterRepository";
-
-const UNIQUE_VIOLATION = "23505";
-const CHECK_VIOLATION = "23514";
-const INVALID_TEXT_REPRESENTATION = "22P02"; // e.g. a malformed uuid
 
 const rowToSemester = (row: any): Semester => ({
     id: row.id,
@@ -21,8 +18,6 @@ const rowToSemester = (row: any): Semester => ({
     createdAt: row.created_at,
     updatedAt: row.updated_at
 });
-
-const isDatabaseError = (error: unknown, code: string) => error instanceof DatabaseError && error.code === code;
 
 // Maps constraint violations on writes to user-facing errors
 const writeError = (error: unknown, name: string, loggingMessage: string) => {

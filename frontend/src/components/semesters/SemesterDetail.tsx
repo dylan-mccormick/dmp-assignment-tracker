@@ -2,6 +2,7 @@
 // The edit pane for one semester: its metadata, a form to change its name/dates, and deletion
 
 import { useContext } from "react";
+import { Link } from "react-router";
 
 import apiFetch, { readError } from "../../apiClient";
 import { BannerContext } from "../../context/BannerContext";
@@ -103,6 +104,12 @@ const SemesterDetail = ({ semester, onSaved, onDeleted }: SemesterDetailProps) =
                     { label: "Last Updated", value: formatDateTime(semester.updatedAt) }
                 ]}
             />
+
+            <Link
+                to={`/classes?semester=${encodeURIComponent(semester.id)}`}
+                className="inline-block text-primary underline active:text-blue-600">
+                View classes
+            </Link>
 
             <section>
                 <h2 className="text-lg font-light mb-4">Edit</h2>
