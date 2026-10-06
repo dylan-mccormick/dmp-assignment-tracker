@@ -29,6 +29,13 @@ message ClassProgress {
     int32 total = 5; // 0 when the class has no assignments (show "—", not 0%)
 }
 
+// Assignments of one type (e.g. "Homework") across the semester
+message TypeProgress {
+    string type = 1;
+    int32 done = 2;
+    int32 total = 3;
+}
+
 // Assignments due within the week [week_start, week_end)
 message WeekSummary {
     int32 done = 1;
@@ -68,6 +75,7 @@ message GetDashboardResponse {
     WeekSummary week = 6;
     repeated DashboardAssignment upcoming = 7; // not done, due within [now, now + 7 days), soonest first
     repeated DashboardAssignment overdue = 8; // not done, due before now, most overdue first
+    repeated TypeProgress types = 9; // only the types the semester uses, most assignments first
 }
 
 service StatsService {

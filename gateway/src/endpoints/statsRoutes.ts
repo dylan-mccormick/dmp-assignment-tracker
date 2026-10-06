@@ -57,7 +57,8 @@ const statsRoutes = (router: Router) => {
             classes: dashboard.classes,
             week: dashboard.week,
             upcoming: dashboard.upcoming.map(toPublicAssignment),
-            overdue: dashboard.overdue.map(toPublicAssignment)
+            overdue: dashboard.overdue.map(toPublicAssignment),
+            types: dashboard.types
         });
     });
 

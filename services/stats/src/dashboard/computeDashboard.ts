@@ -1,7 +1,7 @@
 // computeDashboard.ts
 // Turns a cached snapshot plus the caller's clock into the dashboard; pure, so it runs on every request
 
-import { ClassProgress, DashboardAssignment, GetDashboardResponse } from "../generated/stats";
+import { ClassProgress, DashboardAssignment, GetDashboardResponse, TypeProgress } from "../generated/stats";
 import { AssignmentRow, SemesterRow, SemesterSnapshot } from "./snapshot";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -99,6 +99,16 @@ export const computeDashboard = (
         total: counts.get(c.id)!.total
     }));
 
+    const byType = new Map<string, TypeProgress>();
+    for (const assignment of assignments) {
+        const type = snapshot.typeNames[assignment.typeId] ?? "Other";
+        const progress = byType.get(type) ?? { type, done: 0, total: 0 };
+        progress.total++;
+        if (assignment.done) progress.done++;
+        byType.set(type, progress);
+    }
+    const typeProgress = [...byType.values()].sort((a, b) => b.total - a.total || a.type.localeCompare(b.type));
+
     const thisWeek = assignments.filter(a => dueMs(a) >= weekStart.getTime() && dueMs(a) < weekEnd.getTime());
     const weekDone = thisWeek.filter(a => a.done).length;
 
@@ -119,6 +129,7 @@ export const computeDashboard = (
         overdue: notDone
             .filter(a => dueMs(a) < nowMs)
             .sort(bySoonestDue)
-            .map(toItem)
+            .map(toItem),
+        types: typeProgress
     };
 };

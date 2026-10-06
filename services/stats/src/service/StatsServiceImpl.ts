@@ -22,7 +22,8 @@ const EMPTY_DASHBOARD: GetDashboardResponse = {
     classes: [],
     week: { done: 0, notDone: 0, total: 0 },
     upcoming: [],
-    overdue: []
+    overdue: [],
+    types: []
 };
 
 const invalid = (userFacingMessage: string) =>

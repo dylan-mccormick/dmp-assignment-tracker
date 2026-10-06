@@ -49,6 +49,13 @@ export interface ClassProgress {
   total: number;
 }
 
+/** Assignments of one type (e.g. "Homework") across the semester */
+export interface TypeProgress {
+  type: string;
+  done: number;
+  total: number;
+}
+
 /** Assignments due within the week [week_start, week_end) */
 export interface WeekSummary {
   done: number;
@@ -112,6 +119,8 @@ export interface GetDashboardResponse {
   upcoming: DashboardAssignment[];
   /** not done, due before now, most overdue first */
   overdue: DashboardAssignment[];
+  /** only the types the semester uses, most assignments first */
+  types: TypeProgress[];
 }
 
 function createBaseStatsSemester(): StatsSemester {
@@ -479,6 +488,107 @@ export const ClassProgress: MessageFns<ClassProgress> = {
     message.classId = object.classId ?? "";
     message.code = object.code ?? "";
     message.name = object.name ?? "";
+    message.done = object.done ?? 0;
+    message.total = object.total ?? 0;
+    return message;
+  },
+};
+
+function createBaseTypeProgress(): TypeProgress {
+  return { type: "", done: 0, total: 0 };
+}
+
+export const TypeProgress: MessageFns<TypeProgress> = {
+  encode(message: TypeProgress, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.type !== "") {
+      writer.uint32(10).string(message.type);
+    }
+    if (message.done !== 0) {
+      writer.uint32(16).int32(message.done);
+    }
+    if (message.total !== 0) {
+      writer.uint32(24).int32(message.total);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): TypeProgress {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseTypeProgress();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
+
+            message.type = reader.string();
+            continue;
+          }
+          case 2: {
+            if (tag !== 16) {
+              break;
+            }
+
+            message.done = reader.int32();
+            continue;
+          }
+          case 3: {
+            if (tag !== 24) {
+              break;
+            }
+
+            message.total = reader.int32();
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
+
+  fromJSON(object: any): TypeProgress {
+    return {
+      type: isSet(object.type) ? globalThis.String(object.type) : "",
+      done: isSet(object.done) ? globalThis.Number(object.done) : 0,
+      total: isSet(object.total) ? globalThis.Number(object.total) : 0,
+    };
+  },
+
+  toJSON(message: TypeProgress): unknown {
+    const obj: any = {};
+    if (message.type !== "") {
+      obj.type = message.type;
+    }
+    if (message.done !== 0) {
+      obj.done = Math.round(message.done);
+    }
+    if (message.total !== 0) {
+      obj.total = Math.round(message.total);
+    }
+    return obj;
+  },
+
+  create<I extends Exact<DeepPartial<TypeProgress>, I>>(base?: I): TypeProgress {
+    return TypeProgress.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<TypeProgress>, I>>(object: I): TypeProgress {
+    const message = createBaseTypeProgress();
+    message.type = object.type ?? "";
     message.done = object.done ?? 0;
     message.total = object.total ?? 0;
     return message;
@@ -962,6 +1072,7 @@ function createBaseGetDashboardResponse(): GetDashboardResponse {
     week: undefined,
     upcoming: [],
     overdue: [],
+    types: [],
   };
 }
 
@@ -990,6 +1101,9 @@ export const GetDashboardResponse: MessageFns<GetDashboardResponse> = {
     }
     for (const v of message.overdue) {
       DashboardAssignment.encode(v!, writer.uint32(66).fork()).join();
+    }
+    for (const v of message.types) {
+      TypeProgress.encode(v!, writer.uint32(74).fork()).join();
     }
     return writer;
   },
@@ -1071,6 +1185,14 @@ export const GetDashboardResponse: MessageFns<GetDashboardResponse> = {
             message.overdue.push(DashboardAssignment.decode(reader, reader.uint32()));
             continue;
           }
+          case 9: {
+            if (tag !== 74) {
+              break;
+            }
+
+            message.types.push(TypeProgress.decode(reader, reader.uint32()));
+            continue;
+          }
         }
         if ((tag & 7) === 4 || tag === 0) {
           break;
@@ -1107,6 +1229,7 @@ export const GetDashboardResponse: MessageFns<GetDashboardResponse> = {
       overdue: globalThis.Array.isArray(object?.overdue)
         ? object.overdue.map((e: any) => DashboardAssignment.fromJSON(e))
         : [],
+      types: globalThis.Array.isArray(object?.types) ? object.types.map((e: any) => TypeProgress.fromJSON(e)) : [],
     };
   },
 
@@ -1136,6 +1259,9 @@ export const GetDashboardResponse: MessageFns<GetDashboardResponse> = {
     if (message.overdue?.length) {
       obj.overdue = message.overdue.map((e) => DashboardAssignment.toJSON(e));
     }
+    if (message.types?.length) {
+      obj.types = message.types.map((e) => TypeProgress.toJSON(e));
+    }
     return obj;
   },
 
@@ -1158,6 +1284,7 @@ export const GetDashboardResponse: MessageFns<GetDashboardResponse> = {
       : undefined;
     message.upcoming = object.upcoming?.map((e) => DashboardAssignment.fromPartial(e)) || [];
     message.overdue = object.overdue?.map((e) => DashboardAssignment.fromPartial(e)) || [];
+    message.types = object.types?.map((e) => TypeProgress.fromPartial(e)) || [];
     return message;
   },
 };
