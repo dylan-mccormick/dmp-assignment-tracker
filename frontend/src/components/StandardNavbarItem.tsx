@@ -7,12 +7,14 @@ interface StandardNavbarItemProps {
     icon: React.ReactNode;
     label: string;
     href: string;
+    onClick?: () => void;
 }
 
-const StandardNavbarItem = ({ icon, label, href }: StandardNavbarItemProps) => {
+const StandardNavbarItem = ({ icon, label, href, onClick }: StandardNavbarItemProps) => {
     return (
         <NavLink
             to={href}
+            onClick={onClick}
             className={({ isActive }) =>
                 `flex items-center p-2 text-sm hover:bg-gray-100 ${isActive ? "font-bold" : "font-medium"}`
             }>

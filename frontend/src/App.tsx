@@ -12,6 +12,7 @@ import ComposeProviders from "./ComposeProviders";
 import BannerContextProvider from "./context/BannerContextProvider";
 import LoadingBannerContextProvider from "./context/LoadingBannerContextProvider";
 import ModalContextProvider from "./context/ModalContextProvider";
+import NavbarContextProvider from "./context/NavbarContextProvider";
 import UserContextProvider from "./context/UserContextProvider";
 import Account from "./pages/Account";
 import Dashboard from "./pages/Dashboard";
@@ -25,7 +26,8 @@ const App = () => {
                 LoadingBannerContextProvider,
                 ModalContextProvider,
                 BannerContextProvider,
-                UserContextProvider
+                UserContextProvider,
+                NavbarContextProvider
             ]}>
             <LoadingBanner />
             <Modal />

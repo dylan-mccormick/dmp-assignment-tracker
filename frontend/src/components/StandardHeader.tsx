@@ -8,10 +8,10 @@ import HeaderUserMenu from "./HeaderUserMenu";
 
 interface StandardHeaderProps {
     hideNavbar?: boolean;
-    setNavOpen: (_: (b: boolean) => boolean) => void;
+    toggleNav: () => void;
 }
 
-const StandardHeader = ({ hideNavbar, setNavOpen }: StandardHeaderProps) => {
+const StandardHeader = ({ hideNavbar, toggleNav }: StandardHeaderProps) => {
     return (
         <>
             <link
@@ -27,7 +27,7 @@ const StandardHeader = ({ hideNavbar, setNavOpen }: StandardHeaderProps) => {
                         <button
                             className="cursor-pointer text-black"
                             aria-label="Toggle navigation"
-                            onClick={() => setNavOpen(n => !n)}>
+                            onClick={toggleNav}>
                             <Menu className="mr-2" />
                         </button>
                     )}
