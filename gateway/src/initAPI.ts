@@ -29,8 +29,11 @@ const initAPI = () => {
     app.use(bodyParser.urlencoded({ extended: true }));
     app.use(cookieParser());
 
-    app.listen(process.env.PORT, () => {
-        console.log(`API gateway is listening on PORT ${process.env.PORT}`);
+    // Default to 8080, the port the frontend's nginx proxies to: with PORT unset, listen(undefined) would bind a random
+    // free port, and every /api/ request would 502
+    const port = Number(process.env.PORT ?? 8080);
+    app.listen(port, () => {
+        console.log(`API gateway is listening on PORT ${port}`);
     }).on("error", err => {
         console.error("Failed to start API server:", err);
     });
