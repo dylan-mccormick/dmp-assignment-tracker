@@ -160,6 +160,121 @@ export interface DeleteClassResponse {
   deleted: boolean;
 }
 
+/** One of the global, read-only assignment types (e.g. "Homework", "Exam"), shared by every user */
+export interface AssignmentType {
+  id: string;
+  value: string;
+}
+
+/**
+ * An assignment belongs to one of the user's classes. Names don't have to be unique.
+ * The optional early and late deadlines bracket the main one: early_due <= due <= late_due.
+ */
+export interface Assignment {
+  id: string;
+  classId: string;
+  typeId: string;
+  name: string;
+  done: boolean;
+  /** unset when there's no early deadline */
+  earlyDue: Date | undefined;
+  due:
+    | Date
+    | undefined;
+  /** unset when late submissions aren't accepted */
+  lateDue: Date | undefined;
+  createdAt: Date | undefined;
+  updatedAt: Date | undefined;
+}
+
+export interface ListAssignmentTypesRequest {
+}
+
+export interface ListAssignmentTypesResponse {
+  /** ordered by value */
+  types: AssignmentType[];
+}
+
+/** class_id must be one of the user's classes (else NOT_FOUND); an unknown type_id is INVALID_ARGUMENT */
+export interface CreateAssignmentRequest {
+  userId: string;
+  classId: string;
+  typeId: string;
+  name: string;
+  done: boolean;
+  earlyDue:
+    | Date
+    | undefined;
+  /** required */
+  due: Date | undefined;
+  lateDue: Date | undefined;
+}
+
+export interface CreateAssignmentResponse {
+  assignment: Assignment | undefined;
+}
+
+/**
+ * Lists all of the user's assignments, or only one class's or one semester's (setting both is INVALID_ARGUMENT).
+ * A class_id or semester_id that isn't the user's fails with NOT_FOUND rather than returning an empty list.
+ */
+export interface ListAssignmentsRequest {
+  userId: string;
+  classId?: string | undefined;
+  semesterId?:
+    | string
+    | undefined;
+  /** only done (true) or not-done (false) assignments */
+  done?: boolean | undefined;
+}
+
+export interface ListAssignmentsResponse {
+  /** soonest due first */
+  assignments: Assignment[];
+}
+
+export interface GetAssignmentRequest {
+  userId: string;
+  assignmentId: string;
+}
+
+export interface GetAssignmentResponse {
+  assignment: Assignment | undefined;
+}
+
+/**
+ * Partial update: only the fields that are set are changed.
+ * Setting class_id moves the assignment to that class, which must be one of the user's.
+ * An unset early_due/late_due is left alone; to remove one, set clear_early_due/clear_late_due instead
+ * (setting a deadline and its clear flag together is INVALID_ARGUMENT).
+ */
+export interface UpdateAssignmentRequest {
+  userId: string;
+  assignmentId: string;
+  classId?: string | undefined;
+  typeId?: string | undefined;
+  name?: string | undefined;
+  done?: boolean | undefined;
+  earlyDue: Date | undefined;
+  due: Date | undefined;
+  lateDue: Date | undefined;
+  clearEarlyDue: boolean;
+  clearLateDue: boolean;
+}
+
+export interface UpdateAssignmentResponse {
+  assignment: Assignment | undefined;
+}
+
+export interface DeleteAssignmentRequest {
+  userId: string;
+  assignmentId: string;
+}
+
+export interface DeleteAssignmentResponse {
+  deleted: boolean;
+}
+
 function createBaseSemester(): Semester {
   return { id: "", name: "", startDate: "", endDate: "", createdAt: undefined, updatedAt: undefined };
 }
@@ -2254,6 +2369,1603 @@ export const DeleteClassResponse: MessageFns<DeleteClassResponse> = {
   },
 };
 
+function createBaseAssignmentType(): AssignmentType {
+  return { id: "", value: "" };
+}
+
+export const AssignmentType: MessageFns<AssignmentType> = {
+  encode(message: AssignmentType, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.id !== "") {
+      writer.uint32(10).string(message.id);
+    }
+    if (message.value !== "") {
+      writer.uint32(18).string(message.value);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): AssignmentType {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseAssignmentType();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
+
+            message.id = reader.string();
+            continue;
+          }
+          case 2: {
+            if (tag !== 18) {
+              break;
+            }
+
+            message.value = reader.string();
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
+
+  fromJSON(object: any): AssignmentType {
+    return {
+      id: isSet(object.id) ? globalThis.String(object.id) : "",
+      value: isSet(object.value) ? globalThis.String(object.value) : "",
+    };
+  },
+
+  toJSON(message: AssignmentType): unknown {
+    const obj: any = {};
+    if (message.id !== "") {
+      obj.id = message.id;
+    }
+    if (message.value !== "") {
+      obj.value = message.value;
+    }
+    return obj;
+  },
+
+  create<I extends Exact<DeepPartial<AssignmentType>, I>>(base?: I): AssignmentType {
+    return AssignmentType.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<AssignmentType>, I>>(object: I): AssignmentType {
+    const message = createBaseAssignmentType();
+    message.id = object.id ?? "";
+    message.value = object.value ?? "";
+    return message;
+  },
+};
+
+function createBaseAssignment(): Assignment {
+  return {
+    id: "",
+    classId: "",
+    typeId: "",
+    name: "",
+    done: false,
+    earlyDue: undefined,
+    due: undefined,
+    lateDue: undefined,
+    createdAt: undefined,
+    updatedAt: undefined,
+  };
+}
+
+export const Assignment: MessageFns<Assignment> = {
+  encode(message: Assignment, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.id !== "") {
+      writer.uint32(10).string(message.id);
+    }
+    if (message.classId !== "") {
+      writer.uint32(18).string(message.classId);
+    }
+    if (message.typeId !== "") {
+      writer.uint32(26).string(message.typeId);
+    }
+    if (message.name !== "") {
+      writer.uint32(34).string(message.name);
+    }
+    if (message.done !== false) {
+      writer.uint32(40).bool(message.done);
+    }
+    if (message.earlyDue !== undefined) {
+      Timestamp.encode(toTimestamp(message.earlyDue), writer.uint32(50).fork()).join();
+    }
+    if (message.due !== undefined) {
+      Timestamp.encode(toTimestamp(message.due), writer.uint32(58).fork()).join();
+    }
+    if (message.lateDue !== undefined) {
+      Timestamp.encode(toTimestamp(message.lateDue), writer.uint32(66).fork()).join();
+    }
+    if (message.createdAt !== undefined) {
+      Timestamp.encode(toTimestamp(message.createdAt), writer.uint32(74).fork()).join();
+    }
+    if (message.updatedAt !== undefined) {
+      Timestamp.encode(toTimestamp(message.updatedAt), writer.uint32(82).fork()).join();
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): Assignment {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseAssignment();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
+
+            message.id = reader.string();
+            continue;
+          }
+          case 2: {
+            if (tag !== 18) {
+              break;
+            }
+
+            message.classId = reader.string();
+            continue;
+          }
+          case 3: {
+            if (tag !== 26) {
+              break;
+            }
+
+            message.typeId = reader.string();
+            continue;
+          }
+          case 4: {
+            if (tag !== 34) {
+              break;
+            }
+
+            message.name = reader.string();
+            continue;
+          }
+          case 5: {
+            if (tag !== 40) {
+              break;
+            }
+
+            message.done = reader.bool();
+            continue;
+          }
+          case 6: {
+            if (tag !== 50) {
+              break;
+            }
+
+            message.earlyDue = fromTimestamp(Timestamp.decode(reader, reader.uint32()));
+            continue;
+          }
+          case 7: {
+            if (tag !== 58) {
+              break;
+            }
+
+            message.due = fromTimestamp(Timestamp.decode(reader, reader.uint32()));
+            continue;
+          }
+          case 8: {
+            if (tag !== 66) {
+              break;
+            }
+
+            message.lateDue = fromTimestamp(Timestamp.decode(reader, reader.uint32()));
+            continue;
+          }
+          case 9: {
+            if (tag !== 74) {
+              break;
+            }
+
+            message.createdAt = fromTimestamp(Timestamp.decode(reader, reader.uint32()));
+            continue;
+          }
+          case 10: {
+            if (tag !== 82) {
+              break;
+            }
+
+            message.updatedAt = fromTimestamp(Timestamp.decode(reader, reader.uint32()));
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
+
+  fromJSON(object: any): Assignment {
+    return {
+      id: isSet(object.id) ? globalThis.String(object.id) : "",
+      classId: isSet(object.classId)
+        ? globalThis.String(object.classId)
+        : isSet(object.class_id)
+        ? globalThis.String(object.class_id)
+        : "",
+      typeId: isSet(object.typeId)
+        ? globalThis.String(object.typeId)
+        : isSet(object.type_id)
+        ? globalThis.String(object.type_id)
+        : "",
+      name: isSet(object.name) ? globalThis.String(object.name) : "",
+      done: isSet(object.done) ? globalThis.Boolean(object.done) : false,
+      earlyDue: isSet(object.earlyDue)
+        ? fromJsonTimestamp(object.earlyDue)
+        : isSet(object.early_due)
+        ? fromJsonTimestamp(object.early_due)
+        : undefined,
+      due: isSet(object.due) ? fromJsonTimestamp(object.due) : undefined,
+      lateDue: isSet(object.lateDue)
+        ? fromJsonTimestamp(object.lateDue)
+        : isSet(object.late_due)
+        ? fromJsonTimestamp(object.late_due)
+        : undefined,
+      createdAt: isSet(object.createdAt)
+        ? fromJsonTimestamp(object.createdAt)
+        : isSet(object.created_at)
+        ? fromJsonTimestamp(object.created_at)
+        : undefined,
+      updatedAt: isSet(object.updatedAt)
+        ? fromJsonTimestamp(object.updatedAt)
+        : isSet(object.updated_at)
+        ? fromJsonTimestamp(object.updated_at)
+        : undefined,
+    };
+  },
+
+  toJSON(message: Assignment): unknown {
+    const obj: any = {};
+    if (message.id !== "") {
+      obj.id = message.id;
+    }
+    if (message.classId !== "") {
+      obj.classId = message.classId;
+    }
+    if (message.typeId !== "") {
+      obj.typeId = message.typeId;
+    }
+    if (message.name !== "") {
+      obj.name = message.name;
+    }
+    if (message.done !== false) {
+      obj.done = message.done;
+    }
+    if (message.earlyDue !== undefined) {
+      obj.earlyDue = message.earlyDue.toISOString();
+    }
+    if (message.due !== undefined) {
+      obj.due = message.due.toISOString();
+    }
+    if (message.lateDue !== undefined) {
+      obj.lateDue = message.lateDue.toISOString();
+    }
+    if (message.createdAt !== undefined) {
+      obj.createdAt = message.createdAt.toISOString();
+    }
+    if (message.updatedAt !== undefined) {
+      obj.updatedAt = message.updatedAt.toISOString();
+    }
+    return obj;
+  },
+
+  create<I extends Exact<DeepPartial<Assignment>, I>>(base?: I): Assignment {
+    return Assignment.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<Assignment>, I>>(object: I): Assignment {
+    const message = createBaseAssignment();
+    message.id = object.id ?? "";
+    message.classId = object.classId ?? "";
+    message.typeId = object.typeId ?? "";
+    message.name = object.name ?? "";
+    message.done = object.done ?? false;
+    message.earlyDue = object.earlyDue ?? undefined;
+    message.due = object.due ?? undefined;
+    message.lateDue = object.lateDue ?? undefined;
+    message.createdAt = object.createdAt ?? undefined;
+    message.updatedAt = object.updatedAt ?? undefined;
+    return message;
+  },
+};
+
+function createBaseListAssignmentTypesRequest(): ListAssignmentTypesRequest {
+  return {};
+}
+
+export const ListAssignmentTypesRequest: MessageFns<ListAssignmentTypesRequest> = {
+  encode(_: ListAssignmentTypesRequest, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): ListAssignmentTypesRequest {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseListAssignmentTypesRequest();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
+
+  fromJSON(_: any): ListAssignmentTypesRequest {
+    return {};
+  },
+
+  toJSON(_: ListAssignmentTypesRequest): unknown {
+    const obj: any = {};
+    return obj;
+  },
+
+  create<I extends Exact<DeepPartial<ListAssignmentTypesRequest>, I>>(base?: I): ListAssignmentTypesRequest {
+    return ListAssignmentTypesRequest.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<ListAssignmentTypesRequest>, I>>(_: I): ListAssignmentTypesRequest {
+    const message = createBaseListAssignmentTypesRequest();
+    return message;
+  },
+};
+
+function createBaseListAssignmentTypesResponse(): ListAssignmentTypesResponse {
+  return { types: [] };
+}
+
+export const ListAssignmentTypesResponse: MessageFns<ListAssignmentTypesResponse> = {
+  encode(message: ListAssignmentTypesResponse, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    for (const v of message.types) {
+      AssignmentType.encode(v!, writer.uint32(10).fork()).join();
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): ListAssignmentTypesResponse {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseListAssignmentTypesResponse();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
+
+            message.types.push(AssignmentType.decode(reader, reader.uint32()));
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
+
+  fromJSON(object: any): ListAssignmentTypesResponse {
+    return {
+      types: globalThis.Array.isArray(object?.types) ? object.types.map((e: any) => AssignmentType.fromJSON(e)) : [],
+    };
+  },
+
+  toJSON(message: ListAssignmentTypesResponse): unknown {
+    const obj: any = {};
+    if (message.types?.length) {
+      obj.types = message.types.map((e) => AssignmentType.toJSON(e));
+    }
+    return obj;
+  },
+
+  create<I extends Exact<DeepPartial<ListAssignmentTypesResponse>, I>>(base?: I): ListAssignmentTypesResponse {
+    return ListAssignmentTypesResponse.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<ListAssignmentTypesResponse>, I>>(object: I): ListAssignmentTypesResponse {
+    const message = createBaseListAssignmentTypesResponse();
+    message.types = object.types?.map((e) => AssignmentType.fromPartial(e)) || [];
+    return message;
+  },
+};
+
+function createBaseCreateAssignmentRequest(): CreateAssignmentRequest {
+  return {
+    userId: "",
+    classId: "",
+    typeId: "",
+    name: "",
+    done: false,
+    earlyDue: undefined,
+    due: undefined,
+    lateDue: undefined,
+  };
+}
+
+export const CreateAssignmentRequest: MessageFns<CreateAssignmentRequest> = {
+  encode(message: CreateAssignmentRequest, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.userId !== "") {
+      writer.uint32(10).string(message.userId);
+    }
+    if (message.classId !== "") {
+      writer.uint32(18).string(message.classId);
+    }
+    if (message.typeId !== "") {
+      writer.uint32(26).string(message.typeId);
+    }
+    if (message.name !== "") {
+      writer.uint32(34).string(message.name);
+    }
+    if (message.done !== false) {
+      writer.uint32(40).bool(message.done);
+    }
+    if (message.earlyDue !== undefined) {
+      Timestamp.encode(toTimestamp(message.earlyDue), writer.uint32(50).fork()).join();
+    }
+    if (message.due !== undefined) {
+      Timestamp.encode(toTimestamp(message.due), writer.uint32(58).fork()).join();
+    }
+    if (message.lateDue !== undefined) {
+      Timestamp.encode(toTimestamp(message.lateDue), writer.uint32(66).fork()).join();
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): CreateAssignmentRequest {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseCreateAssignmentRequest();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
+
+            message.userId = reader.string();
+            continue;
+          }
+          case 2: {
+            if (tag !== 18) {
+              break;
+            }
+
+            message.classId = reader.string();
+            continue;
+          }
+          case 3: {
+            if (tag !== 26) {
+              break;
+            }
+
+            message.typeId = reader.string();
+            continue;
+          }
+          case 4: {
+            if (tag !== 34) {
+              break;
+            }
+
+            message.name = reader.string();
+            continue;
+          }
+          case 5: {
+            if (tag !== 40) {
+              break;
+            }
+
+            message.done = reader.bool();
+            continue;
+          }
+          case 6: {
+            if (tag !== 50) {
+              break;
+            }
+
+            message.earlyDue = fromTimestamp(Timestamp.decode(reader, reader.uint32()));
+            continue;
+          }
+          case 7: {
+            if (tag !== 58) {
+              break;
+            }
+
+            message.due = fromTimestamp(Timestamp.decode(reader, reader.uint32()));
+            continue;
+          }
+          case 8: {
+            if (tag !== 66) {
+              break;
+            }
+
+            message.lateDue = fromTimestamp(Timestamp.decode(reader, reader.uint32()));
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
+
+  fromJSON(object: any): CreateAssignmentRequest {
+    return {
+      userId: isSet(object.userId)
+        ? globalThis.String(object.userId)
+        : isSet(object.user_id)
+        ? globalThis.String(object.user_id)
+        : "",
+      classId: isSet(object.classId)
+        ? globalThis.String(object.classId)
+        : isSet(object.class_id)
+        ? globalThis.String(object.class_id)
+        : "",
+      typeId: isSet(object.typeId)
+        ? globalThis.String(object.typeId)
+        : isSet(object.type_id)
+        ? globalThis.String(object.type_id)
+        : "",
+      name: isSet(object.name) ? globalThis.String(object.name) : "",
+      done: isSet(object.done) ? globalThis.Boolean(object.done) : false,
+      earlyDue: isSet(object.earlyDue)
+        ? fromJsonTimestamp(object.earlyDue)
+        : isSet(object.early_due)
+        ? fromJsonTimestamp(object.early_due)
+        : undefined,
+      due: isSet(object.due) ? fromJsonTimestamp(object.due) : undefined,
+      lateDue: isSet(object.lateDue)
+        ? fromJsonTimestamp(object.lateDue)
+        : isSet(object.late_due)
+        ? fromJsonTimestamp(object.late_due)
+        : undefined,
+    };
+  },
+
+  toJSON(message: CreateAssignmentRequest): unknown {
+    const obj: any = {};
+    if (message.userId !== "") {
+      obj.userId = message.userId;
+    }
+    if (message.classId !== "") {
+      obj.classId = message.classId;
+    }
+    if (message.typeId !== "") {
+      obj.typeId = message.typeId;
+    }
+    if (message.name !== "") {
+      obj.name = message.name;
+    }
+    if (message.done !== false) {
+      obj.done = message.done;
+    }
+    if (message.earlyDue !== undefined) {
+      obj.earlyDue = message.earlyDue.toISOString();
+    }
+    if (message.due !== undefined) {
+      obj.due = message.due.toISOString();
+    }
+    if (message.lateDue !== undefined) {
+      obj.lateDue = message.lateDue.toISOString();
+    }
+    return obj;
+  },
+
+  create<I extends Exact<DeepPartial<CreateAssignmentRequest>, I>>(base?: I): CreateAssignmentRequest {
+    return CreateAssignmentRequest.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<CreateAssignmentRequest>, I>>(object: I): CreateAssignmentRequest {
+    const message = createBaseCreateAssignmentRequest();
+    message.userId = object.userId ?? "";
+    message.classId = object.classId ?? "";
+    message.typeId = object.typeId ?? "";
+    message.name = object.name ?? "";
+    message.done = object.done ?? false;
+    message.earlyDue = object.earlyDue ?? undefined;
+    message.due = object.due ?? undefined;
+    message.lateDue = object.lateDue ?? undefined;
+    return message;
+  },
+};
+
+function createBaseCreateAssignmentResponse(): CreateAssignmentResponse {
+  return { assignment: undefined };
+}
+
+export const CreateAssignmentResponse: MessageFns<CreateAssignmentResponse> = {
+  encode(message: CreateAssignmentResponse, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.assignment !== undefined) {
+      Assignment.encode(message.assignment, writer.uint32(10).fork()).join();
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): CreateAssignmentResponse {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseCreateAssignmentResponse();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
+
+            message.assignment = Assignment.decode(reader, reader.uint32());
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
+
+  fromJSON(object: any): CreateAssignmentResponse {
+    return { assignment: isSet(object.assignment) ? Assignment.fromJSON(object.assignment) : undefined };
+  },
+
+  toJSON(message: CreateAssignmentResponse): unknown {
+    const obj: any = {};
+    if (message.assignment !== undefined) {
+      obj.assignment = Assignment.toJSON(message.assignment);
+    }
+    return obj;
+  },
+
+  create<I extends Exact<DeepPartial<CreateAssignmentResponse>, I>>(base?: I): CreateAssignmentResponse {
+    return CreateAssignmentResponse.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<CreateAssignmentResponse>, I>>(object: I): CreateAssignmentResponse {
+    const message = createBaseCreateAssignmentResponse();
+    message.assignment = (object.assignment !== undefined && object.assignment !== null)
+      ? Assignment.fromPartial(object.assignment)
+      : undefined;
+    return message;
+  },
+};
+
+function createBaseListAssignmentsRequest(): ListAssignmentsRequest {
+  return { userId: "", classId: undefined, semesterId: undefined, done: undefined };
+}
+
+export const ListAssignmentsRequest: MessageFns<ListAssignmentsRequest> = {
+  encode(message: ListAssignmentsRequest, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.userId !== "") {
+      writer.uint32(10).string(message.userId);
+    }
+    if (message.classId !== undefined) {
+      writer.uint32(18).string(message.classId);
+    }
+    if (message.semesterId !== undefined) {
+      writer.uint32(26).string(message.semesterId);
+    }
+    if (message.done !== undefined) {
+      writer.uint32(32).bool(message.done);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): ListAssignmentsRequest {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseListAssignmentsRequest();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
+
+            message.userId = reader.string();
+            continue;
+          }
+          case 2: {
+            if (tag !== 18) {
+              break;
+            }
+
+            message.classId = reader.string();
+            continue;
+          }
+          case 3: {
+            if (tag !== 26) {
+              break;
+            }
+
+            message.semesterId = reader.string();
+            continue;
+          }
+          case 4: {
+            if (tag !== 32) {
+              break;
+            }
+
+            message.done = reader.bool();
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
+
+  fromJSON(object: any): ListAssignmentsRequest {
+    return {
+      userId: isSet(object.userId)
+        ? globalThis.String(object.userId)
+        : isSet(object.user_id)
+        ? globalThis.String(object.user_id)
+        : "",
+      classId: isSet(object.classId)
+        ? globalThis.String(object.classId)
+        : isSet(object.class_id)
+        ? globalThis.String(object.class_id)
+        : undefined,
+      semesterId: isSet(object.semesterId)
+        ? globalThis.String(object.semesterId)
+        : isSet(object.semester_id)
+        ? globalThis.String(object.semester_id)
+        : undefined,
+      done: isSet(object.done) ? globalThis.Boolean(object.done) : undefined,
+    };
+  },
+
+  toJSON(message: ListAssignmentsRequest): unknown {
+    const obj: any = {};
+    if (message.userId !== "") {
+      obj.userId = message.userId;
+    }
+    if (message.classId !== undefined) {
+      obj.classId = message.classId;
+    }
+    if (message.semesterId !== undefined) {
+      obj.semesterId = message.semesterId;
+    }
+    if (message.done !== undefined) {
+      obj.done = message.done;
+    }
+    return obj;
+  },
+
+  create<I extends Exact<DeepPartial<ListAssignmentsRequest>, I>>(base?: I): ListAssignmentsRequest {
+    return ListAssignmentsRequest.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<ListAssignmentsRequest>, I>>(object: I): ListAssignmentsRequest {
+    const message = createBaseListAssignmentsRequest();
+    message.userId = object.userId ?? "";
+    message.classId = object.classId ?? undefined;
+    message.semesterId = object.semesterId ?? undefined;
+    message.done = object.done ?? undefined;
+    return message;
+  },
+};
+
+function createBaseListAssignmentsResponse(): ListAssignmentsResponse {
+  return { assignments: [] };
+}
+
+export const ListAssignmentsResponse: MessageFns<ListAssignmentsResponse> = {
+  encode(message: ListAssignmentsResponse, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    for (const v of message.assignments) {
+      Assignment.encode(v!, writer.uint32(10).fork()).join();
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): ListAssignmentsResponse {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseListAssignmentsResponse();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
+
+            message.assignments.push(Assignment.decode(reader, reader.uint32()));
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
+
+  fromJSON(object: any): ListAssignmentsResponse {
+    return {
+      assignments: globalThis.Array.isArray(object?.assignments)
+        ? object.assignments.map((e: any) => Assignment.fromJSON(e))
+        : [],
+    };
+  },
+
+  toJSON(message: ListAssignmentsResponse): unknown {
+    const obj: any = {};
+    if (message.assignments?.length) {
+      obj.assignments = message.assignments.map((e) => Assignment.toJSON(e));
+    }
+    return obj;
+  },
+
+  create<I extends Exact<DeepPartial<ListAssignmentsResponse>, I>>(base?: I): ListAssignmentsResponse {
+    return ListAssignmentsResponse.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<ListAssignmentsResponse>, I>>(object: I): ListAssignmentsResponse {
+    const message = createBaseListAssignmentsResponse();
+    message.assignments = object.assignments?.map((e) => Assignment.fromPartial(e)) || [];
+    return message;
+  },
+};
+
+function createBaseGetAssignmentRequest(): GetAssignmentRequest {
+  return { userId: "", assignmentId: "" };
+}
+
+export const GetAssignmentRequest: MessageFns<GetAssignmentRequest> = {
+  encode(message: GetAssignmentRequest, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.userId !== "") {
+      writer.uint32(10).string(message.userId);
+    }
+    if (message.assignmentId !== "") {
+      writer.uint32(18).string(message.assignmentId);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): GetAssignmentRequest {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseGetAssignmentRequest();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
+
+            message.userId = reader.string();
+            continue;
+          }
+          case 2: {
+            if (tag !== 18) {
+              break;
+            }
+
+            message.assignmentId = reader.string();
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
+
+  fromJSON(object: any): GetAssignmentRequest {
+    return {
+      userId: isSet(object.userId)
+        ? globalThis.String(object.userId)
+        : isSet(object.user_id)
+        ? globalThis.String(object.user_id)
+        : "",
+      assignmentId: isSet(object.assignmentId)
+        ? globalThis.String(object.assignmentId)
+        : isSet(object.assignment_id)
+        ? globalThis.String(object.assignment_id)
+        : "",
+    };
+  },
+
+  toJSON(message: GetAssignmentRequest): unknown {
+    const obj: any = {};
+    if (message.userId !== "") {
+      obj.userId = message.userId;
+    }
+    if (message.assignmentId !== "") {
+      obj.assignmentId = message.assignmentId;
+    }
+    return obj;
+  },
+
+  create<I extends Exact<DeepPartial<GetAssignmentRequest>, I>>(base?: I): GetAssignmentRequest {
+    return GetAssignmentRequest.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<GetAssignmentRequest>, I>>(object: I): GetAssignmentRequest {
+    const message = createBaseGetAssignmentRequest();
+    message.userId = object.userId ?? "";
+    message.assignmentId = object.assignmentId ?? "";
+    return message;
+  },
+};
+
+function createBaseGetAssignmentResponse(): GetAssignmentResponse {
+  return { assignment: undefined };
+}
+
+export const GetAssignmentResponse: MessageFns<GetAssignmentResponse> = {
+  encode(message: GetAssignmentResponse, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.assignment !== undefined) {
+      Assignment.encode(message.assignment, writer.uint32(10).fork()).join();
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): GetAssignmentResponse {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseGetAssignmentResponse();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
+
+            message.assignment = Assignment.decode(reader, reader.uint32());
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
+
+  fromJSON(object: any): GetAssignmentResponse {
+    return { assignment: isSet(object.assignment) ? Assignment.fromJSON(object.assignment) : undefined };
+  },
+
+  toJSON(message: GetAssignmentResponse): unknown {
+    const obj: any = {};
+    if (message.assignment !== undefined) {
+      obj.assignment = Assignment.toJSON(message.assignment);
+    }
+    return obj;
+  },
+
+  create<I extends Exact<DeepPartial<GetAssignmentResponse>, I>>(base?: I): GetAssignmentResponse {
+    return GetAssignmentResponse.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<GetAssignmentResponse>, I>>(object: I): GetAssignmentResponse {
+    const message = createBaseGetAssignmentResponse();
+    message.assignment = (object.assignment !== undefined && object.assignment !== null)
+      ? Assignment.fromPartial(object.assignment)
+      : undefined;
+    return message;
+  },
+};
+
+function createBaseUpdateAssignmentRequest(): UpdateAssignmentRequest {
+  return {
+    userId: "",
+    assignmentId: "",
+    classId: undefined,
+    typeId: undefined,
+    name: undefined,
+    done: undefined,
+    earlyDue: undefined,
+    due: undefined,
+    lateDue: undefined,
+    clearEarlyDue: false,
+    clearLateDue: false,
+  };
+}
+
+export const UpdateAssignmentRequest: MessageFns<UpdateAssignmentRequest> = {
+  encode(message: UpdateAssignmentRequest, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.userId !== "") {
+      writer.uint32(10).string(message.userId);
+    }
+    if (message.assignmentId !== "") {
+      writer.uint32(18).string(message.assignmentId);
+    }
+    if (message.classId !== undefined) {
+      writer.uint32(26).string(message.classId);
+    }
+    if (message.typeId !== undefined) {
+      writer.uint32(34).string(message.typeId);
+    }
+    if (message.name !== undefined) {
+      writer.uint32(42).string(message.name);
+    }
+    if (message.done !== undefined) {
+      writer.uint32(48).bool(message.done);
+    }
+    if (message.earlyDue !== undefined) {
+      Timestamp.encode(toTimestamp(message.earlyDue), writer.uint32(58).fork()).join();
+    }
+    if (message.due !== undefined) {
+      Timestamp.encode(toTimestamp(message.due), writer.uint32(66).fork()).join();
+    }
+    if (message.lateDue !== undefined) {
+      Timestamp.encode(toTimestamp(message.lateDue), writer.uint32(74).fork()).join();
+    }
+    if (message.clearEarlyDue !== false) {
+      writer.uint32(80).bool(message.clearEarlyDue);
+    }
+    if (message.clearLateDue !== false) {
+      writer.uint32(88).bool(message.clearLateDue);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): UpdateAssignmentRequest {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseUpdateAssignmentRequest();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
+
+            message.userId = reader.string();
+            continue;
+          }
+          case 2: {
+            if (tag !== 18) {
+              break;
+            }
+
+            message.assignmentId = reader.string();
+            continue;
+          }
+          case 3: {
+            if (tag !== 26) {
+              break;
+            }
+
+            message.classId = reader.string();
+            continue;
+          }
+          case 4: {
+            if (tag !== 34) {
+              break;
+            }
+
+            message.typeId = reader.string();
+            continue;
+          }
+          case 5: {
+            if (tag !== 42) {
+              break;
+            }
+
+            message.name = reader.string();
+            continue;
+          }
+          case 6: {
+            if (tag !== 48) {
+              break;
+            }
+
+            message.done = reader.bool();
+            continue;
+          }
+          case 7: {
+            if (tag !== 58) {
+              break;
+            }
+
+            message.earlyDue = fromTimestamp(Timestamp.decode(reader, reader.uint32()));
+            continue;
+          }
+          case 8: {
+            if (tag !== 66) {
+              break;
+            }
+
+            message.due = fromTimestamp(Timestamp.decode(reader, reader.uint32()));
+            continue;
+          }
+          case 9: {
+            if (tag !== 74) {
+              break;
+            }
+
+            message.lateDue = fromTimestamp(Timestamp.decode(reader, reader.uint32()));
+            continue;
+          }
+          case 10: {
+            if (tag !== 80) {
+              break;
+            }
+
+            message.clearEarlyDue = reader.bool();
+            continue;
+          }
+          case 11: {
+            if (tag !== 88) {
+              break;
+            }
+
+            message.clearLateDue = reader.bool();
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
+
+  fromJSON(object: any): UpdateAssignmentRequest {
+    return {
+      userId: isSet(object.userId)
+        ? globalThis.String(object.userId)
+        : isSet(object.user_id)
+        ? globalThis.String(object.user_id)
+        : "",
+      assignmentId: isSet(object.assignmentId)
+        ? globalThis.String(object.assignmentId)
+        : isSet(object.assignment_id)
+        ? globalThis.String(object.assignment_id)
+        : "",
+      classId: isSet(object.classId)
+        ? globalThis.String(object.classId)
+        : isSet(object.class_id)
+        ? globalThis.String(object.class_id)
+        : undefined,
+      typeId: isSet(object.typeId)
+        ? globalThis.String(object.typeId)
+        : isSet(object.type_id)
+        ? globalThis.String(object.type_id)
+        : undefined,
+      name: isSet(object.name) ? globalThis.String(object.name) : undefined,
+      done: isSet(object.done) ? globalThis.Boolean(object.done) : undefined,
+      earlyDue: isSet(object.earlyDue)
+        ? fromJsonTimestamp(object.earlyDue)
+        : isSet(object.early_due)
+        ? fromJsonTimestamp(object.early_due)
+        : undefined,
+      due: isSet(object.due) ? fromJsonTimestamp(object.due) : undefined,
+      lateDue: isSet(object.lateDue)
+        ? fromJsonTimestamp(object.lateDue)
+        : isSet(object.late_due)
+        ? fromJsonTimestamp(object.late_due)
+        : undefined,
+      clearEarlyDue: isSet(object.clearEarlyDue)
+        ? globalThis.Boolean(object.clearEarlyDue)
+        : isSet(object.clear_early_due)
+        ? globalThis.Boolean(object.clear_early_due)
+        : false,
+      clearLateDue: isSet(object.clearLateDue)
+        ? globalThis.Boolean(object.clearLateDue)
+        : isSet(object.clear_late_due)
+        ? globalThis.Boolean(object.clear_late_due)
+        : false,
+    };
+  },
+
+  toJSON(message: UpdateAssignmentRequest): unknown {
+    const obj: any = {};
+    if (message.userId !== "") {
+      obj.userId = message.userId;
+    }
+    if (message.assignmentId !== "") {
+      obj.assignmentId = message.assignmentId;
+    }
+    if (message.classId !== undefined) {
+      obj.classId = message.classId;
+    }
+    if (message.typeId !== undefined) {
+      obj.typeId = message.typeId;
+    }
+    if (message.name !== undefined) {
+      obj.name = message.name;
+    }
+    if (message.done !== undefined) {
+      obj.done = message.done;
+    }
+    if (message.earlyDue !== undefined) {
+      obj.earlyDue = message.earlyDue.toISOString();
+    }
+    if (message.due !== undefined) {
+      obj.due = message.due.toISOString();
+    }
+    if (message.lateDue !== undefined) {
+      obj.lateDue = message.lateDue.toISOString();
+    }
+    if (message.clearEarlyDue !== false) {
+      obj.clearEarlyDue = message.clearEarlyDue;
+    }
+    if (message.clearLateDue !== false) {
+      obj.clearLateDue = message.clearLateDue;
+    }
+    return obj;
+  },
+
+  create<I extends Exact<DeepPartial<UpdateAssignmentRequest>, I>>(base?: I): UpdateAssignmentRequest {
+    return UpdateAssignmentRequest.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<UpdateAssignmentRequest>, I>>(object: I): UpdateAssignmentRequest {
+    const message = createBaseUpdateAssignmentRequest();
+    message.userId = object.userId ?? "";
+    message.assignmentId = object.assignmentId ?? "";
+    message.classId = object.classId ?? undefined;
+    message.typeId = object.typeId ?? undefined;
+    message.name = object.name ?? undefined;
+    message.done = object.done ?? undefined;
+    message.earlyDue = object.earlyDue ?? undefined;
+    message.due = object.due ?? undefined;
+    message.lateDue = object.lateDue ?? undefined;
+    message.clearEarlyDue = object.clearEarlyDue ?? false;
+    message.clearLateDue = object.clearLateDue ?? false;
+    return message;
+  },
+};
+
+function createBaseUpdateAssignmentResponse(): UpdateAssignmentResponse {
+  return { assignment: undefined };
+}
+
+export const UpdateAssignmentResponse: MessageFns<UpdateAssignmentResponse> = {
+  encode(message: UpdateAssignmentResponse, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.assignment !== undefined) {
+      Assignment.encode(message.assignment, writer.uint32(10).fork()).join();
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): UpdateAssignmentResponse {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseUpdateAssignmentResponse();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
+
+            message.assignment = Assignment.decode(reader, reader.uint32());
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
+
+  fromJSON(object: any): UpdateAssignmentResponse {
+    return { assignment: isSet(object.assignment) ? Assignment.fromJSON(object.assignment) : undefined };
+  },
+
+  toJSON(message: UpdateAssignmentResponse): unknown {
+    const obj: any = {};
+    if (message.assignment !== undefined) {
+      obj.assignment = Assignment.toJSON(message.assignment);
+    }
+    return obj;
+  },
+
+  create<I extends Exact<DeepPartial<UpdateAssignmentResponse>, I>>(base?: I): UpdateAssignmentResponse {
+    return UpdateAssignmentResponse.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<UpdateAssignmentResponse>, I>>(object: I): UpdateAssignmentResponse {
+    const message = createBaseUpdateAssignmentResponse();
+    message.assignment = (object.assignment !== undefined && object.assignment !== null)
+      ? Assignment.fromPartial(object.assignment)
+      : undefined;
+    return message;
+  },
+};
+
+function createBaseDeleteAssignmentRequest(): DeleteAssignmentRequest {
+  return { userId: "", assignmentId: "" };
+}
+
+export const DeleteAssignmentRequest: MessageFns<DeleteAssignmentRequest> = {
+  encode(message: DeleteAssignmentRequest, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.userId !== "") {
+      writer.uint32(10).string(message.userId);
+    }
+    if (message.assignmentId !== "") {
+      writer.uint32(18).string(message.assignmentId);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): DeleteAssignmentRequest {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseDeleteAssignmentRequest();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
+
+            message.userId = reader.string();
+            continue;
+          }
+          case 2: {
+            if (tag !== 18) {
+              break;
+            }
+
+            message.assignmentId = reader.string();
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
+
+  fromJSON(object: any): DeleteAssignmentRequest {
+    return {
+      userId: isSet(object.userId)
+        ? globalThis.String(object.userId)
+        : isSet(object.user_id)
+        ? globalThis.String(object.user_id)
+        : "",
+      assignmentId: isSet(object.assignmentId)
+        ? globalThis.String(object.assignmentId)
+        : isSet(object.assignment_id)
+        ? globalThis.String(object.assignment_id)
+        : "",
+    };
+  },
+
+  toJSON(message: DeleteAssignmentRequest): unknown {
+    const obj: any = {};
+    if (message.userId !== "") {
+      obj.userId = message.userId;
+    }
+    if (message.assignmentId !== "") {
+      obj.assignmentId = message.assignmentId;
+    }
+    return obj;
+  },
+
+  create<I extends Exact<DeepPartial<DeleteAssignmentRequest>, I>>(base?: I): DeleteAssignmentRequest {
+    return DeleteAssignmentRequest.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<DeleteAssignmentRequest>, I>>(object: I): DeleteAssignmentRequest {
+    const message = createBaseDeleteAssignmentRequest();
+    message.userId = object.userId ?? "";
+    message.assignmentId = object.assignmentId ?? "";
+    return message;
+  },
+};
+
+function createBaseDeleteAssignmentResponse(): DeleteAssignmentResponse {
+  return { deleted: false };
+}
+
+export const DeleteAssignmentResponse: MessageFns<DeleteAssignmentResponse> = {
+  encode(message: DeleteAssignmentResponse, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.deleted !== false) {
+      writer.uint32(8).bool(message.deleted);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): DeleteAssignmentResponse {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseDeleteAssignmentResponse();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 8) {
+              break;
+            }
+
+            message.deleted = reader.bool();
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
+
+  fromJSON(object: any): DeleteAssignmentResponse {
+    return { deleted: isSet(object.deleted) ? globalThis.Boolean(object.deleted) : false };
+  },
+
+  toJSON(message: DeleteAssignmentResponse): unknown {
+    const obj: any = {};
+    if (message.deleted !== false) {
+      obj.deleted = message.deleted;
+    }
+    return obj;
+  },
+
+  create<I extends Exact<DeepPartial<DeleteAssignmentResponse>, I>>(base?: I): DeleteAssignmentResponse {
+    return DeleteAssignmentResponse.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<DeleteAssignmentResponse>, I>>(object: I): DeleteAssignmentResponse {
+    const message = createBaseDeleteAssignmentResponse();
+    message.deleted = object.deleted ?? false;
+    return message;
+  },
+};
+
 export type SemesterServiceService = typeof SemesterServiceService;
 export const SemesterServiceService = {
   createSemester: {
@@ -2546,6 +4258,186 @@ export const ClassServiceClient = makeGenericClientConstructor(
 ) as unknown as {
   new (address: string, credentials: ChannelCredentials, options?: Partial<ClientOptions>): ClassServiceClient;
   service: typeof ClassServiceService;
+  serviceName: string;
+};
+
+export type AssignmentServiceService = typeof AssignmentServiceService;
+export const AssignmentServiceService = {
+  listAssignmentTypes: {
+    path: "/assignment.AssignmentService/ListAssignmentTypes" as const,
+    requestStream: false as const,
+    responseStream: false as const,
+    requestSerialize: (value: ListAssignmentTypesRequest): Buffer =>
+      Buffer.from(ListAssignmentTypesRequest.encode(value).finish()),
+    requestDeserialize: (value: Buffer): ListAssignmentTypesRequest => ListAssignmentTypesRequest.decode(value),
+    responseSerialize: (value: ListAssignmentTypesResponse): Buffer =>
+      Buffer.from(ListAssignmentTypesResponse.encode(value).finish()),
+    responseDeserialize: (value: Buffer): ListAssignmentTypesResponse => ListAssignmentTypesResponse.decode(value),
+  },
+  createAssignment: {
+    path: "/assignment.AssignmentService/CreateAssignment" as const,
+    requestStream: false as const,
+    responseStream: false as const,
+    requestSerialize: (value: CreateAssignmentRequest): Buffer =>
+      Buffer.from(CreateAssignmentRequest.encode(value).finish()),
+    requestDeserialize: (value: Buffer): CreateAssignmentRequest => CreateAssignmentRequest.decode(value),
+    responseSerialize: (value: CreateAssignmentResponse): Buffer =>
+      Buffer.from(CreateAssignmentResponse.encode(value).finish()),
+    responseDeserialize: (value: Buffer): CreateAssignmentResponse => CreateAssignmentResponse.decode(value),
+  },
+  listAssignments: {
+    path: "/assignment.AssignmentService/ListAssignments" as const,
+    requestStream: false as const,
+    responseStream: false as const,
+    requestSerialize: (value: ListAssignmentsRequest): Buffer =>
+      Buffer.from(ListAssignmentsRequest.encode(value).finish()),
+    requestDeserialize: (value: Buffer): ListAssignmentsRequest => ListAssignmentsRequest.decode(value),
+    responseSerialize: (value: ListAssignmentsResponse): Buffer =>
+      Buffer.from(ListAssignmentsResponse.encode(value).finish()),
+    responseDeserialize: (value: Buffer): ListAssignmentsResponse => ListAssignmentsResponse.decode(value),
+  },
+  getAssignment: {
+    path: "/assignment.AssignmentService/GetAssignment" as const,
+    requestStream: false as const,
+    responseStream: false as const,
+    requestSerialize: (value: GetAssignmentRequest): Buffer => Buffer.from(GetAssignmentRequest.encode(value).finish()),
+    requestDeserialize: (value: Buffer): GetAssignmentRequest => GetAssignmentRequest.decode(value),
+    responseSerialize: (value: GetAssignmentResponse): Buffer =>
+      Buffer.from(GetAssignmentResponse.encode(value).finish()),
+    responseDeserialize: (value: Buffer): GetAssignmentResponse => GetAssignmentResponse.decode(value),
+  },
+  updateAssignment: {
+    path: "/assignment.AssignmentService/UpdateAssignment" as const,
+    requestStream: false as const,
+    responseStream: false as const,
+    requestSerialize: (value: UpdateAssignmentRequest): Buffer =>
+      Buffer.from(UpdateAssignmentRequest.encode(value).finish()),
+    requestDeserialize: (value: Buffer): UpdateAssignmentRequest => UpdateAssignmentRequest.decode(value),
+    responseSerialize: (value: UpdateAssignmentResponse): Buffer =>
+      Buffer.from(UpdateAssignmentResponse.encode(value).finish()),
+    responseDeserialize: (value: Buffer): UpdateAssignmentResponse => UpdateAssignmentResponse.decode(value),
+  },
+  deleteAssignment: {
+    path: "/assignment.AssignmentService/DeleteAssignment" as const,
+    requestStream: false as const,
+    responseStream: false as const,
+    requestSerialize: (value: DeleteAssignmentRequest): Buffer =>
+      Buffer.from(DeleteAssignmentRequest.encode(value).finish()),
+    requestDeserialize: (value: Buffer): DeleteAssignmentRequest => DeleteAssignmentRequest.decode(value),
+    responseSerialize: (value: DeleteAssignmentResponse): Buffer =>
+      Buffer.from(DeleteAssignmentResponse.encode(value).finish()),
+    responseDeserialize: (value: Buffer): DeleteAssignmentResponse => DeleteAssignmentResponse.decode(value),
+  },
+} as const;
+
+export interface AssignmentServiceServer extends UntypedServiceImplementation {
+  listAssignmentTypes: handleUnaryCall<ListAssignmentTypesRequest, ListAssignmentTypesResponse>;
+  createAssignment: handleUnaryCall<CreateAssignmentRequest, CreateAssignmentResponse>;
+  listAssignments: handleUnaryCall<ListAssignmentsRequest, ListAssignmentsResponse>;
+  getAssignment: handleUnaryCall<GetAssignmentRequest, GetAssignmentResponse>;
+  updateAssignment: handleUnaryCall<UpdateAssignmentRequest, UpdateAssignmentResponse>;
+  deleteAssignment: handleUnaryCall<DeleteAssignmentRequest, DeleteAssignmentResponse>;
+}
+
+export interface AssignmentServiceClient extends Client {
+  listAssignmentTypes(
+    request: ListAssignmentTypesRequest,
+    callback: (error: ServiceError | null, response: ListAssignmentTypesResponse) => void,
+  ): ClientUnaryCall;
+  listAssignmentTypes(
+    request: ListAssignmentTypesRequest,
+    metadata: Metadata,
+    callback: (error: ServiceError | null, response: ListAssignmentTypesResponse) => void,
+  ): ClientUnaryCall;
+  listAssignmentTypes(
+    request: ListAssignmentTypesRequest,
+    metadata: Metadata,
+    options: Partial<CallOptions>,
+    callback: (error: ServiceError | null, response: ListAssignmentTypesResponse) => void,
+  ): ClientUnaryCall;
+  createAssignment(
+    request: CreateAssignmentRequest,
+    callback: (error: ServiceError | null, response: CreateAssignmentResponse) => void,
+  ): ClientUnaryCall;
+  createAssignment(
+    request: CreateAssignmentRequest,
+    metadata: Metadata,
+    callback: (error: ServiceError | null, response: CreateAssignmentResponse) => void,
+  ): ClientUnaryCall;
+  createAssignment(
+    request: CreateAssignmentRequest,
+    metadata: Metadata,
+    options: Partial<CallOptions>,
+    callback: (error: ServiceError | null, response: CreateAssignmentResponse) => void,
+  ): ClientUnaryCall;
+  listAssignments(
+    request: ListAssignmentsRequest,
+    callback: (error: ServiceError | null, response: ListAssignmentsResponse) => void,
+  ): ClientUnaryCall;
+  listAssignments(
+    request: ListAssignmentsRequest,
+    metadata: Metadata,
+    callback: (error: ServiceError | null, response: ListAssignmentsResponse) => void,
+  ): ClientUnaryCall;
+  listAssignments(
+    request: ListAssignmentsRequest,
+    metadata: Metadata,
+    options: Partial<CallOptions>,
+    callback: (error: ServiceError | null, response: ListAssignmentsResponse) => void,
+  ): ClientUnaryCall;
+  getAssignment(
+    request: GetAssignmentRequest,
+    callback: (error: ServiceError | null, response: GetAssignmentResponse) => void,
+  ): ClientUnaryCall;
+  getAssignment(
+    request: GetAssignmentRequest,
+    metadata: Metadata,
+    callback: (error: ServiceError | null, response: GetAssignmentResponse) => void,
+  ): ClientUnaryCall;
+  getAssignment(
+    request: GetAssignmentRequest,
+    metadata: Metadata,
+    options: Partial<CallOptions>,
+    callback: (error: ServiceError | null, response: GetAssignmentResponse) => void,
+  ): ClientUnaryCall;
+  updateAssignment(
+    request: UpdateAssignmentRequest,
+    callback: (error: ServiceError | null, response: UpdateAssignmentResponse) => void,
+  ): ClientUnaryCall;
+  updateAssignment(
+    request: UpdateAssignmentRequest,
+    metadata: Metadata,
+    callback: (error: ServiceError | null, response: UpdateAssignmentResponse) => void,
+  ): ClientUnaryCall;
+  updateAssignment(
+    request: UpdateAssignmentRequest,
+    metadata: Metadata,
+    options: Partial<CallOptions>,
+    callback: (error: ServiceError | null, response: UpdateAssignmentResponse) => void,
+  ): ClientUnaryCall;
+  deleteAssignment(
+    request: DeleteAssignmentRequest,
+    callback: (error: ServiceError | null, response: DeleteAssignmentResponse) => void,
+  ): ClientUnaryCall;
+  deleteAssignment(
+    request: DeleteAssignmentRequest,
+    metadata: Metadata,
+    callback: (error: ServiceError | null, response: DeleteAssignmentResponse) => void,
+  ): ClientUnaryCall;
+  deleteAssignment(
+    request: DeleteAssignmentRequest,
+    metadata: Metadata,
+    options: Partial<CallOptions>,
+    callback: (error: ServiceError | null, response: DeleteAssignmentResponse) => void,
+  ): ClientUnaryCall;
+}
+
+export const AssignmentServiceClient = makeGenericClientConstructor(
+  AssignmentServiceService,
+  "assignment.AssignmentService",
+) as unknown as {
+  new (address: string, credentials: ChannelCredentials, options?: Partial<ClientOptions>): AssignmentServiceClient;
+  service: typeof AssignmentServiceService;
   serviceName: string;
 };
 

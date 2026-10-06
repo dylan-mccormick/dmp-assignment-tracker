@@ -148,3 +148,108 @@ service ClassService {
     rpc UpdateClass (UpdateClassRequest) returns (UpdateClassResponse);
     rpc DeleteClass (DeleteClassRequest) returns (DeleteClassResponse);
 }
+
+// One of the global, read-only assignment types (e.g. "Homework", "Exam"), shared by every user
+message AssignmentType {
+    string id = 1;
+    string value = 2;
+}
+
+// An assignment belongs to one of the user's classes. Names don't have to be unique.
+// The optional early and late deadlines bracket the main one: early_due <= due <= late_due.
+message Assignment {
+    string id = 1;
+    string class_id = 2;
+    string type_id = 3;
+    string name = 4;
+    bool done = 5;
+    google.protobuf.Timestamp early_due = 6; // unset when there's no early deadline
+    google.protobuf.Timestamp due = 7;
+    google.protobuf.Timestamp late_due = 8; // unset when late submissions aren't accepted
+    google.protobuf.Timestamp created_at = 9;
+    google.protobuf.Timestamp updated_at = 10;
+}
+
+message ListAssignmentTypesRequest {}
+
+message ListAssignmentTypesResponse {
+    repeated AssignmentType types = 1; // ordered by value
+}
+
+// class_id must be one of the user's classes (else NOT_FOUND); an unknown type_id is INVALID_ARGUMENT
+message CreateAssignmentRequest {
+    string user_id = 1;
+    string class_id = 2;
+    string type_id = 3;
+    string name = 4;
+    bool done = 5;
+    google.protobuf.Timestamp early_due = 6;
+    google.protobuf.Timestamp due = 7; // required
+    google.protobuf.Timestamp late_due = 8;
+}
+
+message CreateAssignmentResponse {
+    Assignment assignment = 1;
+}
+
+// Lists all of the user's assignments, or only one class's or one semester's (setting both is INVALID_ARGUMENT).
+// A class_id or semester_id that isn't the user's fails with NOT_FOUND rather than returning an empty list.
+message ListAssignmentsRequest {
+    string user_id = 1;
+    optional string class_id = 2;
+    optional string semester_id = 3;
+    optional bool done = 4; // only done (true) or not-done (false) assignments
+}
+
+message ListAssignmentsResponse {
+    repeated Assignment assignments = 1; // soonest due first
+}
+
+message GetAssignmentRequest {
+    string user_id = 1;
+    string assignment_id = 2;
+}
+
+message GetAssignmentResponse {
+    Assignment assignment = 1;
+}
+
+// Partial update: only the fields that are set are changed.
+// Setting class_id moves the assignment to that class, which must be one of the user's.
+// An unset early_due/late_due is left alone; to remove one, set clear_early_due/clear_late_due instead
+// (setting a deadline and its clear flag together is INVALID_ARGUMENT).
+message UpdateAssignmentRequest {
+    string user_id = 1;
+    string assignment_id = 2;
+    optional string class_id = 3;
+    optional string type_id = 4;
+    optional string name = 5;
+    optional bool done = 6;
+    google.protobuf.Timestamp early_due = 7;
+    google.protobuf.Timestamp due = 8;
+    google.protobuf.Timestamp late_due = 9;
+    bool clear_early_due = 10;
+    bool clear_late_due = 11;
+}
+
+message UpdateAssignmentResponse {
+    Assignment assignment = 1;
+}
+
+message DeleteAssignmentRequest {
+    string user_id = 1;
+    string assignment_id = 2;
+}
+
+message DeleteAssignmentResponse {
+    bool deleted = 1;
+}
+
+service AssignmentService {
+    rpc ListAssignmentTypes (ListAssignmentTypesRequest) returns (ListAssignmentTypesResponse);
+    rpc CreateAssignment (CreateAssignmentRequest) returns (CreateAssignmentResponse);
+    rpc ListAssignments (ListAssignmentsRequest) returns (ListAssignmentsResponse);
+    rpc GetAssignment (GetAssignmentRequest) returns (GetAssignmentResponse);
+    rpc UpdateAssignment (UpdateAssignmentRequest) returns (UpdateAssignmentResponse);
+    rpc DeleteAssignment (DeleteAssignmentRequest) returns (DeleteAssignmentResponse);
+}
