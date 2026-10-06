@@ -1,21 +1,23 @@
 // FormField.tsx
-// A labelled form control with its validation error below it
+// A labelled form control with an optional hint and its validation error below it
 
 import type { ReactNode } from "react";
 
-import { fieldErrorId } from "./formControl";
+import { fieldErrorId, fieldHintId } from "./formControl";
 
 interface FormFieldProps {
     /** The control's id, which the label points at */
     id: string;
     label: string;
+    /** Help text shown below the control (pass `hint` to the control too, so it's announced) */
+    hint?: ReactNode;
     /** Shown below the control when set */
     error?: string;
     /** The control, e.g. an Input */
     children: ReactNode;
 }
 
-const FormField = ({ id, label, error, children }: FormFieldProps) => (
+const FormField = ({ id, label, hint, error, children }: FormFieldProps) => (
     <div>
         <label
             htmlFor={id}
@@ -23,6 +25,13 @@ const FormField = ({ id, label, error, children }: FormFieldProps) => (
             {label}
         </label>
         {children}
+        {hint && (
+            <p
+                id={fieldHintId(id)}
+                className="text-xs text-gray-500 mt-1">
+                {hint}
+            </p>
+        )}
         {error && (
             <p
                 id={fieldErrorId(id)}

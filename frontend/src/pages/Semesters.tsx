@@ -11,18 +11,16 @@ import SemesterForm, { type SemesterFormValues } from "../components/semesters/S
 import SplitPane, { SplitPaneItem } from "../components/SplitPane";
 import StandardLayout from "../components/StandardLayout";
 import TertiaryButton from "../components/TertiaryButton";
-import { JWT_STORAGE_KEY } from "../config";
 import { BannerContext } from "../context/BannerContext";
 import { LoadingBannerContext } from "../context/LoadingBannerContext";
 import { ModalContext } from "../context/ModalContext";
-import { LOGGED_OUT, UserContext } from "../context/UserContext";
 import { formatDate, todayDate } from "../dates";
+import useGetJson from "../hooks/useGetJson";
 import { compareSemesters, isCurrentSemester, type Semester } from "../model/Semester";
 import { MAIN_NAV_ITEMS } from "../navItems";
 
 const Semesters = () => {
     // Context
-    const { setUser } = useContext(UserContext);
     const { setBanner } = useContext(BannerContext);
     const { showModal, closeModal } = useContext(ModalContext);
     const { addProcess, removeProcess } = useContext(LoadingBannerContext);
@@ -31,6 +29,7 @@ const Semesters = () => {
     const [semesters, setSemesters] = useState<Semester[]>();
     const [selectedId, setSelectedId] = useState<string>();
 
+    const getJson = useGetJson();
     const selected = semesters?.find(s => s.id === selectedId);
     const currentDate = todayDate();
 
@@ -41,17 +40,8 @@ const Semesters = () => {
 
         const fetchSemesters = async () => {
             try {
-                const res = await apiFetch("/semesters", { signal: controller.signal });
-
-                if (res.status === 401) {
-                    localStorage.removeItem(JWT_STORAGE_KEY);
-                    setUser(LOGGED_OUT);
-                    setBanner({ level: "error", message: await readError(res, "Please sign in again.") });
-                    return;
-                }
-                if (!res.ok) throw new Error(await readError(res, `GET /semesters failed with status ${res.status}`));
-
-                setSemesters((await res.json()).semesters);
+                const body = await getJson("/semesters", controller.signal);
+                if (body) setSemesters(body.semesters);
             } catch (error) {
                 if (controller.signal.aborted) return;
                 console.error(error);
@@ -63,7 +53,7 @@ const Semesters = () => {
 
         fetchSemesters();
         return () => controller.abort();
-    }, [addProcess, removeProcess, setBanner, setUser]);
+    }, [addProcess, removeProcess, setBanner, getJson]);
 
     // Adds or replaces a semester, keeping the API's order
     const upsertSemester = (semester: Semester) =>

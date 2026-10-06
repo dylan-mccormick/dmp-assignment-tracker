@@ -60,7 +60,7 @@ Only the gateway and frontend are exposed to the host in prod. In compose, the f
 
 ### Protobuf / gRPC
 
-`proto/*.proto` is the source of truth. `authentication.proto` has `AuthenticationService`, and `assignment.proto` has `SemesterService` and `ClassService` (assignments still to come); `stats.proto` still needs to be written. Generated code (ts-proto with `outputServices=grpc-js`) is committed to each package under `src/generated/`, so after editing a `.proto` you must regenerate it in **every** package (gateway and each service). Never hand-edit `src/generated/`. ts-proto converts snake_case fields to camelCase (`google_auth_token` → `googleAuthToken`).
+`proto/*.proto` is the source of truth. `authentication.proto` has `AuthenticationService`, and `assignment.proto` has `SemesterService`, `ClassService`, and `AssignmentService` (which also serves the read-only `ListAssignmentTypes`); `stats.proto` still needs to be written. Generated code (ts-proto with `outputServices=grpc-js`) is committed to each package under `src/generated/`, so after editing a `.proto` you must regenerate it in **every** package (gateway and each service). Never hand-edit `src/generated/`. ts-proto converts snake_case fields to camelCase (`google_auth_token` → `googleAuthToken`).
 
 ### Backend service layering
 
@@ -102,6 +102,7 @@ The schemas live in `services/<name>/init.sql`.
   - **Auth:** `middleware/requireAuth.ts` validates `Authorization: Bearer <jwt>` via `SoftValidateJwt` and exposes the user through `getAuthUser(res)`. Responses expose only `{ id, email, name, avatarUrl }`.
   - **Endpoints:** `POST /auth/google { code }` returns `{ user, jwt, created, restored }` (201 if created, 200 if returning or restored). `GET /auth/me` returns `{ user }`. `POST /auth/logout` returns 204.
 - **Frontend:** React 19, Vite, Tailwind v4, and `react-router` (not `react-router-dom`), with the React Compiler enabled through babel. Shared components live in `src/components/`, routes in `src/pages/`, and global state in `src/context/`.
+  - **No non-null assertions (`x!`) on not-yet-loaded state inside component closures.** The React Compiler treats `data!.classes` in a callback as a plain `data.classes` dependency, and checks it on every render (even while `data` is still undefined, which crashes). It also stops guarding `data?.classes` elsewhere in the component. Pass the loaded value in as an argument from JSX that's already inside the `data && ...` guard instead.
   - **Context pattern:** each context is split into `XContext.tsx` (type + `createContext` defaults) and `XContextProvider.tsx` (state), and they're stacked in `App.tsx` via `ComposeProviders`.
   - **Style** (modelled on dmp-registry-frontend): minimal, `--color-primary: #074885`, with `PrimaryButton`/`SecondaryButton`/`TertiaryButton`. Feedback goes through a dismissable **`BannerContext`** banner (`setBanner({ level: "success" | "error" | "info", message })`, rendered by `StandardLayout`) and an imperative **`ModalContext`** (`showModal({ type: "alert" | "confirm" | "buttonless", ... })`). The usual mutation pattern is a confirm modal, then a `buttonless` modal with `loadingSpinner` while the request runs, then `closeModal()` + `setBanner(...)`. `LoadingBannerContext` (`addProcess`/`removeProcess`) drives a full-screen loading overlay. Logos load from `https://cdn.mnmzc.dev/logos/` (not `mnmzc.us.to`).
   - **API config:** `VITE_GOOGLE_CLIENT_ID` and `VITE_API_BASE_URL` (`/api/v1`). In dev, Vite proxies `/api` to `API_PROXY_TARGET` (`http://gateway:8080` in compose), so the browser only talks to its own origin and the gateway needs no CORS. Vite inlines `VITE_*` at **build** time, so in prod the runtime `environment:` entry in `docker-compose.prod.yml` has no effect. Prod relies on `/api/v1` being same-origin, served by nginx.
@@ -131,9 +132,10 @@ The schemas live in `services/<name>/init.sql`.
 
 - Gateway: WebSockets for notifications.
 - The stats, notification, and assignment packages don't build yet. Their generated code needs `@grpc/grpc-js` and `@types/node`, which they don't depend on. The old `services/*-service/` folders (just `node_modules`/`.pnpm-store`) are leftovers from the folder rename and can be deleted.
-- `stats.proto`, and the assignment parts of `assignment.proto` and the Assignment Service.
+- `stats.proto`, and the assignment parts of the Assignment Service (the proto is written).
 - Stats aggregation logic.
 - Notification: the push mechanism, the notifications table, and the scheduled reminders.
+- **Due-soon reminders** (e.g. "due in 24h"). These fire on a schedule, not on a change, so events can't drive them: Notification needs a periodic job that scans every user's not-done assignments by `due`. That cross-user scan wants a partial index like `(due) WHERE done = false`, which the current `(user_id, due)` and `(class_id, due)` indexes don't serve.
 - **Account deletion: a 30-day grace period, then permanent deletion.** Signing in during the grace period restores the account (today that works with no time limit). After 30 days, a scheduled purge in auth-service hard-deletes the user and publishes `user.deleted` on RabbitMQ. Then the assignment service deletes their semesters (which cascade to classes and assignments), the stats service drops their cache, and the notification service deletes their notifications, with each consumer idempotent. Signing in after the purge creates a fresh account.
 - `POST /assignment-types`, so the type list can grow.
 - A Postgres migration tool.

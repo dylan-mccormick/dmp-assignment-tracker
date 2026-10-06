@@ -1,10 +1,15 @@
 -- init.sql
 -- Initialization for the assignment service database
 
+-- a global, read-only list of types (no user_id), seeded below
 CREATE TABLE IF NOT EXISTS assignment_type (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     value TEXT UNIQUE NOT NULL
 );
+
+INSERT INTO assignment_type (value)
+VALUES ('Homework'), ('Quiz'), ('Exam'), ('Project'), ('Lab'), ('Reading'), ('Other')
+ON CONFLICT (value) DO NOTHING;
 
 CREATE TABLE IF NOT EXISTS semesters (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -31,14 +36,18 @@ CREATE TABLE IF NOT EXISTS assignments (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     class_id UUID NOT NULL REFERENCES classes(id) ON DELETE CASCADE,
     user_id UUID NOT NULL, -- denormalized for easier querying
-    type_id UUID NOT NULL REFERENCES assignment_type(id) ON DELETE CASCADE,
+    -- types are shared by every user, so a type that's in use can't be deleted (CASCADE would delete everyone's)
+    type_id UUID NOT NULL REFERENCES assignment_type(id) ON DELETE RESTRICT,
     name TEXT NOT NULL,
     done BOOLEAN NOT NULL DEFAULT FALSE,
     early_due TIMESTAMPTZ,
     due TIMESTAMPTZ NOT NULL,
     late_due TIMESTAMPTZ,
+    notes TEXT NOT NULL DEFAULT '', -- free-form, possibly long; '' when there are none
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    -- the optional early and late deadlines bracket the main one (NULL comparisons pass the CHECK)
+    CONSTRAINT assignments_due_order CHECK (early_due <= due AND due <= late_due)
 );
 
 -- Create Indexes for faster querying
@@ -49,5 +58,6 @@ CREATE INDEX IF NOT EXISTS idx_classes_user_id ON classes(user_id);
 -- class names are unique per semester, ignoring case (the same class can be retaken in another semester);
 -- this index also serves lookups by semester_id, so it replaces a plain index on that column
 CREATE UNIQUE INDEX IF NOT EXISTS uq_classes_semester_name ON classes(semester_id, LOWER(name));
-CREATE INDEX IF NOT EXISTS idx_assignments_user_id ON assignments(user_id);
-CREATE INDEX IF NOT EXISTS idx_assignments_class_id ON assignments(class_id);
+-- "my assignments" and "this class's assignments" are both listed in due order, so the indexes include due
+CREATE INDEX IF NOT EXISTS idx_assignments_user_due ON assignments(user_id, due);
+CREATE INDEX IF NOT EXISTS idx_assignments_class_due ON assignments(class_id, due);
