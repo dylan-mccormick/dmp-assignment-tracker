@@ -25,17 +25,20 @@ interface DashboardCardProps {
     /** Height in grid units (1 to 3) */
     h?: GridUnits;
     title?: string;
+    /** Accessible name when the card has no visible title (e.g. its content leads with its own heading) */
+    label?: string;
     /** Shown at the right of the title row, e.g. a link */
     action?: ReactNode;
     children?: ReactNode;
 }
 
-const DashboardCard = ({ w = 1, h = 1, title, action, children }: DashboardCardProps) => {
+const DashboardCard = ({ w = 1, h = 1, title, label, action, children }: DashboardCardProps) => {
     const titleId = useId();
 
     return (
         <section
             aria-labelledby={title ? titleId : undefined}
+            aria-label={title ? undefined : label}
             className={`${COL_SPAN[w]} ${ROW_SPAN[h]} min-w-0 flex flex-col rounded-lg border border-gray-200 bg-white p-4 overflow-hidden`}>
             {(title || action) && (
                 <div className="flex items-center justify-between gap-2 mb-3">
