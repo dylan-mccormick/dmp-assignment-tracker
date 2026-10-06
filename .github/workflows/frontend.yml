@@ -45,6 +45,10 @@ jobs:
                   context: ./frontend
                   file: ./frontend/Dockerfile
                   target: prod
+                  # Vite inlines these at build time. The client ID is public (it's in the bundle), so it's a repository
+                  # variable rather than a secret: Settings -> Secrets and variables -> Actions -> Variables
+                  build-args: |
+                    VITE_GOOGLE_CLIENT_ID=${{ vars.VITE_GOOGLE_CLIENT_ID }}
                   push: true
                   tags: |
                     ${{ env.IMAGE_NAME }}:${{ env.tag }}
