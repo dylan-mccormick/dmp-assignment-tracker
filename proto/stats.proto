@@ -1,0 +1,75 @@
+syntax = "proto3";
+
+package stats;
+import "google/protobuf/timestamp.proto";
+
+// Stats is a read model over the assignment service: it never owns data, and everything here can be rebuilt from it.
+// The caller supplies "now" and the week boundaries, since they depend on the user's timezone, which only the client
+// knows.
+
+message StatsSemester {
+    string id = 1;
+    string name = 2;
+    string start_date = 3; // "YYYY-MM-DD"
+    string end_date = 4; // "YYYY-MM-DD"
+}
+
+// How much of the semester has passed, counting whole days, both ends inclusive
+message SemesterProgress {
+    int32 days_elapsed = 1; // 0 before it starts, days_total after it ends
+    int32 days_total = 2;
+    double fraction = 3; // days_elapsed / days_total, 0..1
+}
+
+message ClassProgress {
+    string class_id = 1;
+    string code = 2;
+    string name = 3;
+    int32 done = 4;
+    int32 total = 5; // 0 when the class has no assignments (show "—", not 0%)
+}
+
+// Assignments due within the week [week_start, week_end)
+message WeekSummary {
+    int32 done = 1;
+    int32 not_done = 2;
+    int32 total = 3;
+}
+
+// An assignment in the upcoming or overdue list, with what the dashboard shows next to it
+message DashboardAssignment {
+    string id = 1;
+    string name = 2;
+    string class_id = 3;
+    string class_code = 4;
+    string class_name = 5;
+    string type = 6; // e.g. "Homework"
+    google.protobuf.Timestamp due = 7;
+    google.protobuf.Timestamp late_due = 8; // unset when late submissions aren't accepted
+}
+
+message GetDashboardRequest {
+    string user_id = 1;
+    // The semester to summarize; when unset, the active one: the semester containing `today` (the most recently
+    // started, if they overlap), else the next one to start, else the most recently ended
+    optional string semester_id = 2;
+    string today = 3; // the user's local date, "YYYY-MM-DD"
+    google.protobuf.Timestamp now = 4;
+    google.protobuf.Timestamp week_start = 5; // the user's local Monday 00:00
+    google.protobuf.Timestamp week_end = 6; // the next Monday 00:00 (exclusive)
+}
+
+message GetDashboardResponse {
+    StatsSemester semester = 1; // unset when the user has no semesters; then everything below is empty
+    SemesterProgress progress = 2;
+    int32 assignments_done = 3; // across the semester
+    int32 assignments_total = 4;
+    repeated ClassProgress classes = 5; // every class in the semester, by name
+    WeekSummary week = 6;
+    repeated DashboardAssignment upcoming = 7; // not done, due within [now, now + 7 days), soonest first
+    repeated DashboardAssignment overdue = 8; // not done, due before now, most overdue first
+}
+
+service StatsService {
+    rpc GetDashboard (GetDashboardRequest) returns (GetDashboardResponse);
+}
