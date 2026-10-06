@@ -52,7 +52,9 @@ const Modal = () => {
                     </div>
                 )}
 
-                {modal.type !== "buttonless" && (
+                {modal.type === "custom" && modal.content}
+
+                {(modal.type === "alert" || modal.type === "confirm") && (
                     <div className="flex gap-2 justify-end">
                         {modal.type === "confirm" && (
                             <SecondaryButton

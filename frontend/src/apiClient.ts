@@ -25,3 +25,15 @@ const apiFetch = (path: string, { body, headers, ...init }: Omit<RequestInit, "b
 };
 
 export default apiFetch;
+
+/**
+ * Reads the gateway's `{ error }` message from a failed response
+ *
+ * @param res The failed response
+ * @param fallback The message to use if the body has none
+ * @returns The user-facing error message
+ */
+export const readError = async (res: Response, fallback: string): Promise<string> => {
+    const body = await res.json().catch(() => undefined);
+    return typeof body?.error === "string" ? body.error : fallback;
+};

@@ -1,7 +1,7 @@
 // ModalContext.tsx
 // Context for the global imperative modal
 
-import { createContext } from "react";
+import { createContext, type ReactNode } from "react";
 
 interface BaseModalConfig {
     title: string;
@@ -27,7 +27,13 @@ interface ButtonlessModalConfig extends BaseModalConfig {
     type: "buttonless";
 }
 
-export type ModalConfig = AlertModalConfig | ConfirmModalConfig | ButtonlessModalConfig;
+// Renders arbitrary content (e.g. a form) with no default buttons; the content is responsible for closing the modal
+interface CustomModalConfig extends BaseModalConfig {
+    type: "custom";
+    content: ReactNode;
+}
+
+export type ModalConfig = AlertModalConfig | ConfirmModalConfig | ButtonlessModalConfig | CustomModalConfig;
 
 interface ModalContextInterface {
     modal: ModalConfig | undefined;
