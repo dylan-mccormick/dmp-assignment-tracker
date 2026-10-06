@@ -6,15 +6,51 @@ on:
         paths:
             - 'docker-compose.yml'
             - 'docker-compose.prod.yml'
+    # Run by hand (Actions -> this workflow -> Run workflow), e.g. to push an init.sql change. init.sql isn't a trigger
+    # path: services/<pkg>/** already starts that service's deploy, and two deploys at once would race
+    workflow_dispatch:
 
 concurrency:
     group: full-stack-deploy
     cancel-in-progress: false
 
+# The prod host only has what's copied to it: the compose files and the init.sql files they bind-mount come from the
+# repo on every run, while .env.prod (secrets) lives only on the host and is never touched
+env:
+    SYNCED_FILES: docker-compose.yml,docker-compose.prod.yml,services/auth/init.sql,services/assignment/init.sql
+
 jobs:
     redeploy:
         runs-on: ubuntu-latest
         steps:
+            - name: Checkout Code
+              uses: actions/checkout@v4
+
+            # A bind mount whose source file is missing makes Docker create an empty directory there, which would
+            # then swallow the copy (init.sql/init.sql); clear any such directory first
+            - name: Clear directories left where files belong
+              uses: appleboy/ssh-action@v1
+              with:
+                  host: ${{ secrets.PROD_HOST }}
+                  username: ${{ secrets.PROD_USER }}
+                  key: ${{ secrets.PROD_SSH_KEY }}
+                  script: |
+                    cd ${{ secrets.PROD_COMPOSE_DIR }}
+                    for f in $(echo "${{ env.SYNCED_FILES }}" | tr ',' ' '); do
+                      if [ -d "$f" ]; then echo "removing directory $f"; rm -rf "$f"; fi
+                    done
+
+            # Keeps each file's path (services/auth/init.sql lands in services/auth/). Never set `rm: true`: it would
+            # delete the target folder, .env.prod included
+            - name: Copy compose and init files to the prod host
+              uses: appleboy/scp-action@v1
+              with:
+                  host: ${{ secrets.PROD_HOST }}
+                  username: ${{ secrets.PROD_USER }}
+                  key: ${{ secrets.PROD_SSH_KEY }}
+                  source: ${{ env.SYNCED_FILES }}
+                  target: ${{ secrets.PROD_COMPOSE_DIR }}
+
             - name: Redeploy all services
               uses: appleboy/ssh-action@v1
               with:
