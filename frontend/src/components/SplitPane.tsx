@@ -18,6 +18,10 @@ const SplitPaneContext = createContext<SplitPaneContextInterface>({
 interface SplitPaneProps {
     /** The list rows: SplitPaneItems */
     children: ReactNode;
+    /** The entered item's key, or undefined while just the list is shown */
+    selectedKey: string | undefined;
+    /** Called with an item's key when it's entered, and with undefined when the detail pane is closed */
+    onSelect: (itemKey: string | undefined) => void;
     /** Renders the detail pane for the entered item */
     renderDetail: (selectedKey: string) => ReactNode;
     /** Optional heading shown in the detail pane's toolbar */
@@ -36,6 +40,7 @@ const PaneButton = ({
     children: ReactNode;
 }) => (
     <button
+        type="button"
         aria-label={label}
         title={label}
         onClick={onClick}
@@ -44,16 +49,19 @@ const PaneButton = ({
     </button>
 );
 
-const SplitPane = ({ children, renderDetail, renderDetailTitle }: SplitPaneProps) => {
+const SplitPane = ({ children, selectedKey, onSelect, renderDetail, renderDetailTitle }: SplitPaneProps) => {
     // State
-    const [selectedKey, setSelectedKey] = useState<string>();
     const [expanded, setExpanded] = useState(false);
 
-    const enter = useCallback((itemKey: string) => setSelectedKey(itemKey), []);
-    const close = () => {
-        setSelectedKey(undefined);
-        setExpanded(false);
-    };
+    // collapse back to the split view whenever the detail pane closes (including when the parent closes it)
+    const [previousKey, setPreviousKey] = useState(selectedKey);
+    if (selectedKey !== previousKey) {
+        setPreviousKey(selectedKey);
+        if (selectedKey === undefined) setExpanded(false);
+    }
+
+    const enter = useCallback((itemKey: string) => onSelect(itemKey), [onSelect]);
+    const close = () => onSelect(undefined);
 
     const open = selectedKey !== undefined;
     const full = open && expanded;
@@ -100,27 +108,28 @@ const SplitPane = ({ children, renderDetail, renderDetailTitle }: SplitPaneProps
 interface SplitPaneItemProps {
     /** Identifies the item; passed to renderDetail when entered */
     itemKey: string;
-    /** Accessible name for the enter button, e.g. the item's name */
-    label?: string;
-    /** The row's content */
+    /** The row's content. The whole row is a button, so this must not contain buttons, links or inputs */
     children: ReactNode;
 }
 
-export const SplitPaneItem = ({ itemKey, label, children }: SplitPaneItemProps) => {
+export const SplitPaneItem = ({ itemKey, children }: SplitPaneItemProps) => {
     const { selectedKey, enter } = useContext(SplitPaneContext);
     const selected = selectedKey === itemKey;
 
     return (
-        <li
-            aria-current={selected || undefined}
-            className={`group flex items-center gap-2 px-4 py-3 transition-colors duration-150 ${selected ? "bg-gray-100" : "hover:bg-gray-50"}`}>
-            <div className="flex-1 min-w-0">{children}</div>
-            <PaneButton
-                label={label ? `Open ${label}` : "Open"}
+        <li>
+            <button
+                type="button"
+                aria-current={selected || undefined}
                 onClick={() => enter(itemKey)}
-                className={selected ? "hover:bg-gray-200" : ""}>
-                <ChevronRight className="w-5 h-5 transition-transform duration-150 ease-out group-hover:translate-x-0.5 motion-reduce:transition-none" />
-            </PaneButton>
+                className={`group w-full flex items-center gap-2 px-4 py-3 text-left cursor-pointer transition-colors duration-150 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-primary ${selected ? "bg-gray-100" : "hover:bg-gray-50"}`}>
+                <div className="flex-1 min-w-0">{children}</div>
+                {/* decorative: the whole row is the button */}
+                <ChevronRight
+                    aria-hidden="true"
+                    className="shrink-0 w-5 h-5 text-gray-400 transition duration-150 ease-out group-hover:translate-x-0.5 group-hover:text-gray-600 motion-reduce:transition-none"
+                />
+            </button>
         </li>
     );
 };
