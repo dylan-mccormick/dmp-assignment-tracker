@@ -3,8 +3,9 @@
 
 import { type FormEvent, type ReactNode, useState } from "react";
 
-import PrimaryButton from "../PrimaryButton";
-import SecondaryButton from "../SecondaryButton";
+import FormActions from "../form/FormActions";
+import FormField from "../form/FormField";
+import Input from "../form/Input";
 
 export interface SemesterFormValues {
     name: string;
@@ -39,9 +40,6 @@ interface SemesterFormProps {
     /** Extra buttons on the left of the action row (e.g. Delete) */
     extraActions?: ReactNode;
 }
-
-const inputClass = (invalid: boolean) =>
-    `w-full px-3 py-2 border rounded transition-colors focus:outline-none focus:ring-2 ${invalid ? "border-red-500 focus:ring-red-200" : "border-gray-300 focus:ring-primary/30"}`;
 
 const SemesterForm = ({
     initialValues = { name: "", startDate: "", endDate: "" },
@@ -84,33 +82,16 @@ const SemesterForm = ({
         }
     };
 
-    const field = (key: keyof SemesterFormValues, label: string, input: ReactNode) => (
-        <div>
-            <label
-                htmlFor={`semester-${key}`}
-                className="block text-sm text-gray-600 mb-1">
-                {label}
-            </label>
-            {input}
-            {errors[key] && (
-                <p
-                    id={`semester-${key}-error`}
-                    className="text-sm text-red-700 mt-1">
-                    {errors[key]}
-                </p>
-            )}
-        </div>
-    );
-
     return (
         <form
             noValidate
             onSubmit={handleSubmit}
             className="space-y-4">
-            {field(
-                "name",
-                "Name",
-                <input
+            <FormField
+                id="semester-name"
+                label="Name"
+                error={errors.name}>
+                <Input
                     id="semester-name"
                     type="text"
                     autoFocus={!initialValues.name}
@@ -118,65 +99,47 @@ const SemesterForm = ({
                     placeholder="e.g. Fall 2026"
                     value={values.name}
                     onChange={setField("name")}
-                    aria-invalid={!!errors.name}
-                    aria-describedby={errors.name ? "semester-name-error" : undefined}
-                    className={inputClass(!!errors.name)}
+                    invalid={!!errors.name}
                 />
-            )}
+            </FormField>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {field(
-                    "startDate",
-                    "Start date",
-                    <input
+                <FormField
+                    id="semester-startDate"
+                    label="Start date"
+                    error={errors.startDate}>
+                    <Input
                         id="semester-startDate"
                         type="date"
                         value={values.startDate}
                         onChange={setField("startDate")}
-                        aria-invalid={!!errors.startDate}
-                        aria-describedby={errors.startDate ? "semester-startDate-error" : undefined}
-                        className={inputClass(!!errors.startDate)}
+                        invalid={!!errors.startDate}
                     />
-                )}
-                {field(
-                    "endDate",
-                    "End date",
-                    <input
+                </FormField>
+                <FormField
+                    id="semester-endDate"
+                    label="End date"
+                    error={errors.endDate}>
+                    <Input
                         id="semester-endDate"
                         type="date"
                         min={values.startDate || undefined}
                         value={values.endDate}
                         onChange={setField("endDate")}
-                        aria-invalid={!!errors.endDate}
-                        aria-describedby={errors.endDate ? "semester-endDate-error" : undefined}
-                        className={inputClass(!!errors.endDate)}
+                        invalid={!!errors.endDate}
                     />
-                )}
+                </FormField>
             </div>
 
-            {formError && (
-                <p
-                    role="alert"
-                    className="text-sm text-red-700">
-                    {formError}
-                </p>
-            )}
-
-            <div className="flex items-center gap-2 pt-2">
-                <div className="flex-1">{extraActions}</div>
-                {onCancel && (
-                    <SecondaryButton
-                        onClick={onCancel}
-                        disabled={submitting}>
-                        Cancel
-                    </SecondaryButton>
-                )}
-                <PrimaryButton
-                    type="submit"
-                    disabled={submitting || (requireChanges && !changed)}>
-                    {submitting ? submittingLabel : submitLabel}
-                </PrimaryButton>
-            </div>
+            <FormActions
+                error={formError}
+                submitting={submitting}
+                submitLabel={submitLabel}
+                submittingLabel={submittingLabel}
+                submitDisabled={requireChanges && !changed}
+                onCancel={onCancel}
+                extraActions={extraActions}
+            />
         </form>
     );
 };
