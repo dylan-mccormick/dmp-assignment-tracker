@@ -3,7 +3,7 @@
 // modal to create one
 
 import { Plus } from "lucide-react";
-import { useCallback, useContext, useEffect, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router";
 
 import apiFetch, { readError } from "../apiClient";
@@ -14,12 +14,11 @@ import PrimaryButton from "../components/PrimaryButton";
 import SplitPane, { SplitPaneItem } from "../components/SplitPane";
 import StandardLayout from "../components/StandardLayout";
 import TertiaryButton from "../components/TertiaryButton";
-import { JWT_STORAGE_KEY } from "../config";
 import { BannerContext } from "../context/BannerContext";
 import { LoadingBannerContext } from "../context/LoadingBannerContext";
 import { ModalContext } from "../context/ModalContext";
-import { LOGGED_OUT, UserContext } from "../context/UserContext";
 import { todayDate } from "../dates";
+import useGetJson from "../hooks/useGetJson";
 import { type Class, compareClasses } from "../model/Class";
 import { isCurrentSemester, type Semester } from "../model/Semester";
 import { MAIN_NAV_ITEMS } from "../navItems";
@@ -29,7 +28,6 @@ const SEMESTER_PARAM = "semester";
 
 const Classes = () => {
     // Context
-    const { setUser } = useContext(UserContext);
     const { setBanner } = useContext(BannerContext);
     const { showModal, closeModal } = useContext(ModalContext);
     const { addProcess, removeProcess } = useContext(LoadingBannerContext);
@@ -52,21 +50,7 @@ const Classes = () => {
     const classes = loaded && loaded.semesterId === semesterId ? loaded.classes : undefined;
     const selected = classes?.find(c => c.id === selectedId);
 
-    // GETs a path, signing the user out on a 401; returns undefined when it did (or the request was aborted)
-    const getJson = useCallback(
-        async (path: string, signal: AbortSignal) => {
-            const res = await apiFetch(path, { signal });
-            if (res.status === 401) {
-                localStorage.removeItem(JWT_STORAGE_KEY);
-                setUser(LOGGED_OUT);
-                setBanner({ level: "error", message: await readError(res, "Please sign in again.") });
-                return undefined;
-            }
-            if (!res.ok) throw new Error(await readError(res, `GET ${path} failed with status ${res.status}`));
-            return res.json();
-        },
-        [setBanner, setUser]
-    );
+    const getJson = useGetJson();
 
     // Load the user's semesters for the dropdown
     useEffect(() => {
