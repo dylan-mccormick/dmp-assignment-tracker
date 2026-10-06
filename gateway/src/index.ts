@@ -5,6 +5,7 @@ import { Router } from "express";
 
 import accountRoutes from "./endpoints/accountRoutes";
 import authRoutes from "./endpoints/authRoutes";
+import classRoutes from "./endpoints/classRoutes";
 import semesterRoutes from "./endpoints/semesterRoutes";
 import errorHandler from "./errorHandler";
 import initAPI from "./initAPI";
@@ -14,6 +15,7 @@ const app = initAPI();
 app.use("/api/v1/auth", authRoutes(Router()));
 app.use("/api/v1/account", accountRoutes(Router()));
 app.use("/api/v1/semesters", semesterRoutes(Router()));
+app.use("/api/v1/classes", classRoutes(Router()));
 
 app.use((_req, res) => {
     res.status(404).json({ error: "Not found." });
