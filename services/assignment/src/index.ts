@@ -3,11 +3,15 @@
 
 import { Pool, types } from "pg";
 
-import { ClassServiceService, SemesterServiceService } from "./generated/assignment";
+import { NoopAssignmentEvents } from "./events/NoopAssignmentEvents";
+import { AssignmentServiceService, ClassServiceService, SemesterServiceService } from "./generated/assignment";
+import assignmentGrpcImpl from "./grpc/assignmentGrpcImpl";
 import classGrpcImpl from "./grpc/classGrpcImpl";
 import semesterGrpcImpl from "./grpc/semesterGrpcImpl";
+import { AssignmentRepositoryImpl } from "./repository/AssignmentRepositoryImpl";
 import { ClassRepositoryImpl } from "./repository/ClassRepositoryImpl";
 import { SemesterRepositoryImpl } from "./repository/SemesterRepositoryImpl";
+import { AssignmentServiceImpl } from "./service/AssignmentServiceImpl";
 import { ClassServiceImpl } from "./service/ClassServiceImpl";
 import { SemesterServiceImpl } from "./service/SemesterServiceImpl";
 import startServer from "./startServer";
@@ -25,15 +29,19 @@ const main = async () => {
     // Initialize Repositories
     const semesterRepository = new SemesterRepositoryImpl(dbPool);
     const classRepository = new ClassRepositoryImpl(dbPool);
+    const assignmentRepository = new AssignmentRepositoryImpl(dbPool);
 
     // Initialize Services
     const semesterService = new SemesterServiceImpl(semesterRepository);
     const classService = new ClassServiceImpl(classRepository);
+    // publishes nothing yet; swap in a RabbitMQ publisher once Stats and Notification consume events
+    const assignmentService = new AssignmentServiceImpl(assignmentRepository, new NoopAssignmentEvents());
 
     // Register each generated *Service definition with its grpcImpl
     startServer([
         { definition: SemesterServiceService, implementation: semesterGrpcImpl(semesterService) },
-        { definition: ClassServiceService, implementation: classGrpcImpl(classService) }
+        { definition: ClassServiceService, implementation: classGrpcImpl(classService) },
+        { definition: AssignmentServiceService, implementation: assignmentGrpcImpl(assignmentService) }
     ]);
 };
 
