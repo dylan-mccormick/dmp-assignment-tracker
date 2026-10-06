@@ -15,6 +15,7 @@ import ModalContextProvider from "./context/ModalContextProvider";
 import NavbarContextProvider from "./context/NavbarContextProvider";
 import UserContextProvider from "./context/UserContextProvider";
 import Account from "./pages/Account";
+import Classes from "./pages/Classes";
 import Dashboard from "./pages/Dashboard";
 import Login from "./pages/Login";
 import PageNotFound from "./pages/PageNotFound";
@@ -62,6 +63,14 @@ const App = () => {
                             element={
                                 <ProtectedRoute>
                                     <Account />
+                                </ProtectedRoute>
+                            }
+                        />
+                        <Route
+                            path="/classes"
+                            element={
+                                <ProtectedRoute>
+                                    <Classes />
                                 </ProtectedRoute>
                             }
                         />
