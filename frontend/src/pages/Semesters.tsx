@@ -16,15 +16,9 @@ import { BannerContext } from "../context/BannerContext";
 import { LoadingBannerContext } from "../context/LoadingBannerContext";
 import { ModalContext } from "../context/ModalContext";
 import { LOGGED_OUT, UserContext } from "../context/UserContext";
-import { formatDate } from "../dates";
-import { compareSemesters, type Semester } from "../model/Semester";
+import { formatDate, todayDate } from "../dates";
+import { compareSemesters, isCurrentSemester, type Semester } from "../model/Semester";
 import { MAIN_NAV_ITEMS } from "../navItems";
-
-// Today as a local "YYYY-MM-DD" date, to mark the current semester
-const today = () => {
-    const now = new Date();
-    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
-};
 
 const Semesters = () => {
     // Context
@@ -38,7 +32,7 @@ const Semesters = () => {
     const [selectedId, setSelectedId] = useState<string>();
 
     const selected = semesters?.find(s => s.id === selectedId);
-    const currentDate = today();
+    const currentDate = todayDate();
 
     // Load the user's semesters
     useEffect(() => {
@@ -153,7 +147,7 @@ const Semesters = () => {
                             itemKey={semester.id}>
                             <p className="flex items-center gap-2 min-w-0">
                                 <span className="truncate">{semester.name}</span>
-                                {semester.startDate <= currentDate && currentDate <= semester.endDate && (
+                                {isCurrentSemester(semester, currentDate) && (
                                     <span className="shrink-0 text-xs px-2 py-0.5 rounded-full bg-blue-50 text-primary">
                                         Current
                                     </span>

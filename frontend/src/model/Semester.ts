@@ -19,3 +19,13 @@ export interface Semester {
  */
 export const compareSemesters = (a: Semester, b: Semester) =>
     b.startDate.localeCompare(a.startDate) || b.createdAt.localeCompare(a.createdAt);
+
+/**
+ * Whether a calendar date falls within the semester (inclusive)
+ *
+ * @param semester The semester
+ * @param date A "YYYY-MM-DD" calendar date, e.g. from todayDate()
+ * @returns True when the semester is running on that date
+ */
+export const isCurrentSemester = (semester: Semester, date: string) =>
+    semester.startDate <= date && date <= semester.endDate;

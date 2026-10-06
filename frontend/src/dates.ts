@@ -32,3 +32,13 @@ export const calendarDateToUtcMs = (date: string) => {
     const [year, month, day] = date.split("-").map(Number);
     return Date.UTC(year, month - 1, day);
 };
+
+/**
+ * Today as a local "YYYY-MM-DD" calendar date, comparable with the API's dates as strings
+ *
+ * @returns Today's calendar date
+ */
+export const todayDate = () => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+};
