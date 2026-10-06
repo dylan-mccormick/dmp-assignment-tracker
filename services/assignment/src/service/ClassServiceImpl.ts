@@ -4,6 +4,7 @@
 import { status } from "@grpc/grpc-js";
 
 import { MicroserviceError } from "../error/MicroserviceError";
+import { EventPublisher, publishAfterCommit } from "../events/EventPublisher";
 import { Class } from "../generated/assignment";
 import { ClassProps, ClassRepository } from "../repository/ClassRepository";
 import { ClassService, ClassUpdate } from "./ClassService";
@@ -40,9 +41,11 @@ const validate = ({ semesterId, name, code }: ClassProps): ClassProps => {
 
 export class ClassServiceImpl implements ClassService {
     private readonly repository;
+    private readonly events;
 
-    constructor(repository: ClassRepository) {
+    constructor(repository: ClassRepository, events: EventPublisher) {
         this.repository = repository;
+        this.events = events;
     }
 
     async listClasses(userId: string, semesterId?: string): Promise<{ classes: Class[] }> {
@@ -60,6 +63,7 @@ export class ClassServiceImpl implements ClassService {
     async createClass(userId: string, props: ClassProps): Promise<{ class: Class }> {
         const created = await this.repository.createClass(userId, validate(props));
         if (!created) throw semesterNotFound();
+        await publishAfterCommit(this.events, "class.created", userId, { class: created });
         return { class: created };
     }
 
@@ -75,7 +79,10 @@ export class ClassServiceImpl implements ClassService {
         });
 
         const updated = await this.repository.updateClass(userId, classId, props);
-        if (updated) return { class: updated };
+        if (updated) {
+            await publishAfterCommit(this.events, "class.updated", userId, { before: existing, after: updated });
+            return { class: updated };
+        }
 
         // The class existed a moment ago, so this is almost always a bad target semester; re-check in case the class
         // itself was deleted concurrently, so the error names the right thing
@@ -85,6 +92,7 @@ export class ClassServiceImpl implements ClassService {
 
     async deleteClass(userId: string, classId: string): Promise<{ deleted: boolean }> {
         if (!(await this.repository.deleteClass(userId, classId))) throw classNotFound();
+        await publishAfterCommit(this.events, "class.deleted", userId, { classId });
         return { deleted: true };
     }
 }

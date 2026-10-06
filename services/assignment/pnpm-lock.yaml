@@ -213,6 +213,9 @@ importers:
       '@grpc/grpc-js':
         specifier: ^1.14.5
         version: 1.14.5
+      amqplib:
+        specifier: ^2.2.0
+        version: 2.2.0
       pg:
         specifier: ^8.23.1
         version: 8.23.1
@@ -655,6 +658,10 @@ packages:
     engines: {node: '>=16.20.0'}
     cpu: [x64]
     os: [win32]
+
+  amqplib@2.2.0:
+    resolution: {integrity: sha512-VifzN9aHs/Q3zTruVHXh2yCisQyXexBN91CQ2E5iSyUKyNjH6ilYhJGte5AXZH/Bj1PaH7SwPhyuSf6Msd2udw==}
+    engines: {node: '>=18'}
 
   ansi-regex@5.0.1:
     resolution: {integrity: sha512-quJQXlTSUGL2LH9SUXo8VwsY4soanhgo6LNSm84E1LBcE8s3O0wpdiRzyR9z/ZZJMlMWv37qOOb9pdJlMUEKFQ==}
@@ -1191,6 +1198,8 @@ snapshots:
 
   '@typescript/typescript-win32-x64@7.0.2':
     optional: true
+
+  amqplib@2.2.0: {}
 
   ansi-regex@5.0.1: {}
 

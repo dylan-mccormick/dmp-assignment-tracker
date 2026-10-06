@@ -31,6 +31,7 @@
   "dependencies": {
     "@bufbuild/protobuf": "^2.15.0",
     "@grpc/grpc-js": "^1.14.5",
+    "amqplib": "^2.2.0",
     "pg": "^8.23.1",
     "uuid": "^14.0.2"
   }

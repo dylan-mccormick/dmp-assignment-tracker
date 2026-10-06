@@ -4,7 +4,7 @@
 import { status } from "@grpc/grpc-js";
 
 import { MicroserviceError } from "../error/MicroserviceError";
-import { AssignmentEvents } from "../events/AssignmentEvents";
+import { EventPublisher, publishAfterCommit } from "../events/EventPublisher";
 import { Assignment, AssignmentType } from "../generated/assignment";
 import { AssignmentFilter, AssignmentProps, AssignmentRepository } from "../repository/AssignmentRepository";
 import { AssignmentCreate, AssignmentService, AssignmentUpdate } from "./AssignmentService";
@@ -57,18 +57,9 @@ export class AssignmentServiceImpl implements AssignmentService {
     private readonly repository;
     private readonly events;
 
-    constructor(repository: AssignmentRepository, events: AssignmentEvents) {
+    constructor(repository: AssignmentRepository, events: EventPublisher) {
         this.repository = repository;
         this.events = events;
-    }
-
-    // The write has already committed, so a failed event must not fail the request (see AssignmentEvents)
-    private async emit(publish: () => Promise<void>) {
-        try {
-            await publish();
-        } catch (error) {
-            console.error("Failed to publish assignment event:", error);
-        }
     }
 
     async listAssignmentTypes(): Promise<{ types: AssignmentType[] }> {
@@ -101,7 +92,7 @@ export class AssignmentServiceImpl implements AssignmentService {
         const assignment = await this.repository.createAssignment(userId, validate(props));
         if (!assignment) throw classNotFound();
 
-        await this.emit(() => this.events.created(userId, assignment));
+        await publishAfterCommit(this.events, "assignment.created", userId, { assignment });
         return { assignment };
     }
 
@@ -140,7 +131,7 @@ export class AssignmentServiceImpl implements AssignmentService {
             throw classNotFound();
         }
 
-        await this.emit(() => this.events.updated(userId, existing, assignment));
+        await publishAfterCommit(this.events, "assignment.updated", userId, { before: existing, after: assignment });
         return { assignment };
     }
 
@@ -148,7 +139,7 @@ export class AssignmentServiceImpl implements AssignmentService {
         const deleted = await this.repository.deleteAssignment(userId, assignmentId);
         if (!deleted) throw assignmentNotFound();
 
-        await this.emit(() => this.events.deleted(userId, deleted));
+        await publishAfterCommit(this.events, "assignment.deleted", userId, { assignment: deleted });
         return { deleted: true };
     }
 }
