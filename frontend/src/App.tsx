@@ -15,6 +15,7 @@ import ModalContextProvider from "./context/ModalContextProvider";
 import NavbarContextProvider from "./context/NavbarContextProvider";
 import UserContextProvider from "./context/UserContextProvider";
 import Account from "./pages/Account";
+import AssignmentEditor from "./pages/AssignmentEditor";
 import Assignments from "./pages/Assignments";
 import Classes from "./pages/Classes";
 import Dashboard from "./pages/Dashboard";
@@ -72,6 +73,22 @@ const App = () => {
                             element={
                                 <ProtectedRoute>
                                     <Assignments />
+                                </ProtectedRoute>
+                            }
+                        />
+                        <Route
+                            path="/assignments/new"
+                            element={
+                                <ProtectedRoute>
+                                    <AssignmentEditor />
+                                </ProtectedRoute>
+                            }
+                        />
+                        <Route
+                            path="/assignments/:id"
+                            element={
+                                <ProtectedRoute>
+                                    <AssignmentEditor />
                                 </ProtectedRoute>
                             }
                         />
