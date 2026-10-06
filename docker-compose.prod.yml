@@ -34,6 +34,8 @@ services:
         environment:
             PORT: 8080
             NODE_ENV: production
+            # host nginx (TLS) -> frontend nginx -> gateway; add one per extra proxy in front (e.g. a CDN)
+            TRUST_PROXY: 2
             JWT_SECRET: ${JWT_SECRET}
             AUTH_SERVICE_URL: auth-service:50051
             ASSIGNMENT_SERVICE_URL: assignment-service:50052

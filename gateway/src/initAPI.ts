@@ -11,6 +11,12 @@ import morgan from "morgan";
 const initAPI = () => {
     const app = express();
 
+    // How many reverse proxies sit in front of the gateway (in prod: the host's TLS nginx, then the frontend's nginx).
+    // Express then takes req.ip from that many hops back in X-Forwarded-For; without it every request looks like it
+    // came from the nearest proxy, and all users would share one rate-limit budget. Too high a count lets a client
+    // spoof its IP with its own X-Forwarded-For, so it must match the real number of proxies
+    app.set("trust proxy", Number(process.env.TRUST_PROXY ?? 0));
+
     app.use(
         rateLimit({
             limit: 100, // per client IP
