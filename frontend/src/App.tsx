@@ -18,6 +18,7 @@ import Account from "./pages/Account";
 import Dashboard from "./pages/Dashboard";
 import Login from "./pages/Login";
 import PageNotFound from "./pages/PageNotFound";
+import Semesters from "./pages/Semesters";
 
 const App = () => {
     return (
@@ -61,6 +62,14 @@ const App = () => {
                             element={
                                 <ProtectedRoute>
                                     <Account />
+                                </ProtectedRoute>
+                            }
+                        />
+                        <Route
+                            path="/semesters"
+                            element={
+                                <ProtectedRoute>
+                                    <Semesters />
                                 </ProtectedRoute>
                             }
                         />
