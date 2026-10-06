@@ -13,6 +13,7 @@ import { BannerContext } from "../context/BannerContext";
 import { LoadingBannerContext } from "../context/LoadingBannerContext";
 import { ModalContext } from "../context/ModalContext";
 import { LOGGED_OUT, UserContext } from "../context/UserContext";
+import { formatDateTime } from "../dates";
 import { MAIN_NAV_ITEMS } from "../navItems";
 
 interface AccountDetails {
@@ -23,9 +24,6 @@ interface AccountDetails {
     createdAt: string;
     updatedAt: string;
 }
-
-const formatDateTime = (iso: string) =>
-    new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short" }).format(new Date(iso));
 
 const Account = () => {
     // Context
