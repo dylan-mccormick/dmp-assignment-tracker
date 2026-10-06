@@ -90,7 +90,7 @@ This pattern is established in `services/auth/src/`; follow it in the other serv
 - Users are upserted by `google_id`, not email, because email can change. This is one atomic `INSERT … ON CONFLICT (google_id) DO UPDATE` (`upsertUserByGoogleId`), and `created` is true when the returned id is the newly generated one. Name, email, and avatar are overwritten from Google on every login. The avatar is optional. A soft-deleted user who signs in again is **restored** (`deleted_at = NULL`), and `SignInUser` returns `restored: true` so the frontend can say so. A `previous` CTE reads the row's pre-upsert `deleted_at`, because `RETURNING` only sees the new values. For now this works at any time after deletion; see Open work for the planned grace period. There's no password field and no "change Google account" feature.
 - **The JWT** is HS256 with a 7-day TTL, and its claims are only `{ sub, email, name, avatarUrl, tokenVersion }`. Don't sign the full `User`: its `Date`s become strings and then fail to re-encode as protobuf `Timestamp`s. `SoftValidateJwt` builds its returned `User` from those claims (no googleId or timestamps), so validation never needs a DB read for the profile.
 - **Revocation:** the `tokenVersion` claim is compared against `users.token_version`, cache-aside in Redis under `token-version:{userId}` (5-min TTL). **Logout bumps the version (atomically, `incrementTokenVersion`) and kills every session on every device.** This is a deliberate simplification, with no separate per-device logout. Account deletion is a soft delete (`deleted_at`), which also bumps the version and clears the Redis key. Repository reads ignore deleted users.
-- **Frontend:** the session UI isn't wired up yet. `Login.tsx` still has a TODO to post the code, and Dylan plans to implement this part himself. The plan is to store the JWT in `localStorage` (an accepted trade-off at this scale) and send it as `Authorization: Bearer <jwt>`.
+- **Frontend:** `Login.tsx` posts the code, the JWT is stored in `localStorage` (an accepted trade-off at this scale) and sent as `Authorization: Bearer <jwt>` by `apiClient`, `UserContextProvider` restores the session on load, and the header menu signs out. A 401 from any page's load signs the user out (`useGetJson`).
 
 ### Schema notes
 
@@ -138,7 +138,6 @@ The schemas live in `services/<name>/init.sql`.
 
 - Gateway: WebSockets for notifications.
 - The notification package doesn't build yet: its generated code needs `@grpc/grpc-js`, which it doesn't depend on. The old `services/*-service/` folders (just `node_modules`/`.pnpm-store`) are leftovers from the folder rename and can be deleted.
-- Frontend: the dashboard UI over `GET /api/v1/stats/dashboard`.
 - An outbox table for assignment events, if lost events (and the stale-until-TTL dashboard they cause) start to matter.
 - Auth's Redis calls need the same per-call timeout as Stats (see Backend service layering).
 - Notification: the push mechanism, the notifications table, and the scheduled reminders.
@@ -146,7 +145,7 @@ The schemas live in `services/<name>/init.sql`.
 - **Account deletion: a 30-day grace period, then permanent deletion.** Signing in during the grace period restores the account (today that works with no time limit). After 30 days, a scheduled purge in auth-service hard-deletes the user and publishes `user.deleted` on RabbitMQ. Then the assignment service deletes their semesters (which cascade to classes and assignments), the stats service drops their cache, and the notification service deletes their notifications, with each consumer idempotent. Signing in after the purge creates a fresh account.
 - `POST /assignment-types`, so the type list can grow.
 - A Postgres migration tool.
-- Frontend: the shared UI (banner, modal, loading overlay, buttons, layout) is in place. The sign-in wiring (posting the code, storing the JWT, user/session context, header sign-out) is Dylan's to implement. The dashboard, CRUD UI, and account page are still to build.
+- Frontend: sign-in, the account page, CRUD pages for semesters, classes and assignments, and the dashboard are built. Still to come: a semester picker on the dashboard (the API already takes `semesterId`) and the notification feed.
 
 ## Working with Dylan
 
