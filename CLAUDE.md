@@ -30,7 +30,7 @@ pnpm exec oxfmt        # format (frontend also has `pnpm format`)
 pnpm proto:generate    # backend packages only; regenerate gRPC TS from ../proto (requires protoc)
 ```
 
-A local, untracked `.git/hooks/pre-commit` (zsh) runs `pnpm oxlint`/`oxfmt` on staged `.ts`/`.tsx` files. It groups files by their nearest `package.json`, uses `(cd "$PKG_DIR" && pnpm ...)` subshells because `pnpm --dir` was unreliable, and re-stages the formatted files. It skips `*/generated/*`, so committed generated code stays exactly what ts-proto emits (re-running `proto:generate` on an unchanged proto should produce no diff). It needs `grealpath` (`brew install coreutils`). Watch for zsh-specific splitting when editing it: `${(f)VAR}` splits on newlines and `${=VAR}` splits on words.
+A local, untracked `.git/hooks/pre-commit` (zsh) runs `pnpm oxlint`/`oxfmt` on staged `.ts`/`.tsx` files. It groups files by their nearest `package.json`, uses `(cd "$PKG_DIR" && pnpm ...)` subshells because `pnpm --dir` was unreliable, and re-stages the formatted files, except partially staged ones (files that also have unstaged changes), which it formats in the working tree but leaves unstaged with a warning so the unstaged changes don't get swept into the commit. It skips `*/generated/*`, so committed generated code stays exactly what ts-proto emits (re-running `proto:generate` on an unchanged proto should produce no diff). It needs `grealpath` (`brew install coreutils`). Watch for zsh-specific splitting when editing it: `${(f)VAR}` splits on newlines and `${=VAR}` splits on words.
 
 ## Architecture
 
