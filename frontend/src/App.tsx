@@ -17,6 +17,7 @@ import UserContextProvider from "./context/UserContextProvider";
 import Account from "./pages/Account";
 import AssignmentEditor from "./pages/AssignmentEditor";
 import Assignments from "./pages/Assignments";
+import AssignmentView from "./pages/AssignmentView";
 import Classes from "./pages/Classes";
 import Dashboard from "./pages/Dashboard";
 import Login from "./pages/Login";
@@ -86,6 +87,14 @@ const App = () => {
                         />
                         <Route
                             path="/assignments/:id"
+                            element={
+                                <ProtectedRoute>
+                                    <AssignmentView />
+                                </ProtectedRoute>
+                            }
+                        />
+                        <Route
+                            path="/assignments/:id/edit"
                             element={
                                 <ProtectedRoute>
                                     <AssignmentEditor />

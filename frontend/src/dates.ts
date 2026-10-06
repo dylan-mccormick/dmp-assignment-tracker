@@ -107,3 +107,28 @@ export const endOfLocalDay = (date: string) => {
     const [year, month, day] = date.split("-").map(Number);
     return new Date(year, month - 1, day + 1).getTime() - 1;
 };
+
+const RELATIVE_UNITS: [Intl.RelativeTimeFormatUnit, number][] = [
+    ["year", 365 * 24 * 60 * 60 * 1000],
+    ["month", 30 * 24 * 60 * 60 * 1000],
+    ["week", 7 * 24 * 60 * 60 * 1000],
+    ["day", 24 * 60 * 60 * 1000],
+    ["hour", 60 * 60 * 1000],
+    ["minute", 60 * 1000]
+];
+
+/**
+ * Describes a timestamp relative to now in its largest whole unit, e.g. "in 3 days" or "2 hours ago"
+ *
+ * @param timestamp The ISO timestamp
+ * @param now The current time in milliseconds
+ * @returns The relative description ("now" within a minute)
+ */
+export const formatRelative = (timestamp: string, now: number) => {
+    const diff = Date.parse(timestamp) - now;
+    const format = new Intl.RelativeTimeFormat(undefined, { numeric: "auto" });
+    for (const [unit, ms] of RELATIVE_UNITS) {
+        if (Math.abs(diff) >= ms) return format.format(Math.trunc(diff / ms), unit);
+    }
+    return format.format(0, "minute");
+};
