@@ -42,7 +42,7 @@ Each of these is deliberately a different pattern:
 - **Redis cache-aside**, used twice with the same pattern: (1) Assignment Service read-heavy queries, (2) Stats Service's only storage.
 - **Redis for fast revocation**: this backs `token_version` checks (see Auth). It is not caching for speed.
 
-Only the gateway and frontend are exposed to the host in prod. In compose, the frontend is on `frontend_net` only, and the gateway connects both networks.
+Only the frontend is exposed to the host in prod (`15007`); the gateway is reachable only through the frontend's nginx at `/api/`, so a client can't skip the proxies that `TRUST_PROXY` counts. In compose, the frontend is on `frontend_net` only, and the gateway connects both networks.
 
 ### Services
 

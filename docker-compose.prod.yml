@@ -42,8 +42,8 @@ services:
             ASSIGNMENT_SERVICE_URL: assignment-service:50052
             STATS_SERVICE_URL: stats-service:50053
             REDIS_URL: redis://redis:6379
-        ports:
-            - 15009:8080   # only service besides frontend exposed to the host
+        # no host port: the only way in is through the frontend's nginx (/api/), so every request has passed the
+        # proxies TRUST_PROXY counts. A published port would let a client skip them and spoof its IP
 
     auth-service:
         image: ghcr.io/dylan-mccormick/auth-service:latest
