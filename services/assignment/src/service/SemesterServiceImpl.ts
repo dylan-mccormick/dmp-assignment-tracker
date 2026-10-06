@@ -4,6 +4,7 @@
 import { status } from "@grpc/grpc-js";
 
 import { MicroserviceError } from "../error/MicroserviceError";
+import { EventPublisher, publishAfterCommit } from "../events/EventPublisher";
 import { Semester } from "../generated/assignment";
 import { SemesterProps, SemesterRepository } from "../repository/SemesterRepository";
 import { SemesterService, SemesterUpdate } from "./SemesterService";
@@ -42,9 +43,11 @@ const validate = ({ name, startDate, endDate }: SemesterProps): SemesterProps =>
 
 export class SemesterServiceImpl implements SemesterService {
     private readonly repository;
+    private readonly events;
 
-    constructor(repository: SemesterRepository) {
+    constructor(repository: SemesterRepository, events: EventPublisher) {
         this.repository = repository;
+        this.events = events;
     }
 
     async listSemesters(userId: string): Promise<{ semesters: Semester[] }> {
@@ -58,7 +61,9 @@ export class SemesterServiceImpl implements SemesterService {
     }
 
     async createSemester(userId: string, props: SemesterProps): Promise<{ semester: Semester }> {
-        return { semester: await this.repository.createSemester(userId, validate(props)) };
+        const semester = await this.repository.createSemester(userId, validate(props));
+        await publishAfterCommit(this.events, "semester.created", userId, { semester });
+        return { semester };
     }
 
     async updateSemester(userId: string, semesterId: string, update: SemesterUpdate): Promise<{ semester: Semester }> {
@@ -75,11 +80,13 @@ export class SemesterServiceImpl implements SemesterService {
 
         const semester = await this.repository.updateSemester(userId, semesterId, props);
         if (!semester) throw notFound(); // deleted concurrently
+        await publishAfterCommit(this.events, "semester.updated", userId, { before: existing, after: semester });
         return { semester };
     }
 
     async deleteSemester(userId: string, semesterId: string): Promise<{ deleted: boolean }> {
         if (!(await this.repository.deleteSemester(userId, semesterId))) throw notFound();
+        await publishAfterCommit(this.events, "semester.deleted", userId, { semesterId });
         return { deleted: true };
     }
 }

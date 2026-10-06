@@ -132,3 +132,16 @@ export const formatRelative = (timestamp: string, now: number) => {
     }
     return format.format(0, "minute");
 };
+
+/**
+ * The viewer's current week, Monday 00:00 to the next Monday 00:00 in their timezone
+ *
+ * @param now The current time
+ * @returns The bounds as ISO timestamps (start inclusive, end exclusive)
+ */
+export const localWeekBounds = (now: Date) => {
+    const daysSinceMonday = (now.getDay() + 6) % 7;
+    const start = new Date(now.getFullYear(), now.getMonth(), now.getDate() - daysSinceMonday);
+    const end = new Date(start.getFullYear(), start.getMonth(), start.getDate() + 7);
+    return { start: start.toISOString(), end: end.toISOString() };
+};

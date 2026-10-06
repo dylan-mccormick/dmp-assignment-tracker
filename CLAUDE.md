@@ -38,7 +38,7 @@ A local, untracked `.git/hooks/pre-commit` (zsh) runs `pnpm oxlint`/`oxfmt` on s
 
 Each of these is deliberately a different pattern:
 - **gRPC** (sync request/response): gateway ↔ services, insecure, inside `backend_net`. The gateway exposes REST at `/api/v1/*` on :8080.
-- **RabbitMQ** (async fan-out): Assignment Service publishes events like `assignment.created`, `assignment.completed`, and `assignment.due_date_changed`. Notification and Stats each subscribe independently. The fan-out is why this isn't a direct service call.
+- **RabbitMQ** (async fan-out): after each committed write, Assignment Service publishes to the durable topic exchange `assignment.events` with routing keys `semester.*`, `class.*` and `assignment.*` (`created`, `updated` with `{ before, after }`, `deleted`). Every message is a persistent JSON envelope `{ id, type, userId, occurredAt, data }` (see `services/assignment/src/events/EventPublisher.ts`). There are no `assignment.completed` / `due_date_changed` keys: consumers derive those from `before`/`after`. Cascading deletes publish only the parent's event. Notification and Stats each subscribe independently, and the fan-out is why this isn't a direct service call.
 - **Redis cache-aside**, used twice with the same pattern: (1) Assignment Service read-heavy queries, (2) Stats Service's only storage.
 - **Redis for fast revocation**: this backs `token_version` checks (see Auth). It is not caching for speed.
 
@@ -54,13 +54,16 @@ Only the gateway and frontend are exposed to the host in prod. In compose, the f
 | `notification-service` | — | (planned table) | In-app due-date reminders |
 
 - **Semesters, classes, and assignments are one bounded context** (a strict containment hierarchy with constant joins), so they are deliberately not split into separate services.
-- **Stats is a rebuildable read model, not a source of truth**, which is why it has no Postgres. On a cache miss it calls Assignment Service and computes the aggregates. On any assignment event it `DEL`s that user's cached aggregate instead of patching it incrementally, which is simpler and correct by construction. TTL is only a safety net.
+- **Stats is a rebuildable read model, not a source of truth**, which is why it has no Postgres. It serves one RPC, `GetDashboard`. Details (`services/stats/src/`):
+  - **It caches inputs, not answers.** Redis holds only what changes when data changes: the user's semesters, and per semester its classes, a slim list of assignments, and the type names. On a miss these come from Assignment Service's existing List RPCs. The parts that depend on the clock (semester progress, this week, upcoming, overdue) are computed from that snapshot on every request, because time passing fires no event.
+  - **Invalidation is a per-user version, not `DEL`.** Keys are `stats:{userId}:version`, `stats:{userId}:semesters`, and `stats:{userId}:semester:{semesterId}`. Each value is stored tagged with the version read *before* it was fetched, and a read (one `MGET` of version + value) accepts it only if the tag still matches. That closes the cache-aside race where a slow miss writes stale data after an invalidation. The durable queue `stats.invalidate` binds `#` and `INCR`s the event's user's version, acking only after it lands. Duplicates are harmless, and cascades are covered without knowing what changed. Values have a 10-min TTL as a safety net against lost events.
+  - **The caller supplies the clock.** The gateway passes the client's `today` and Monday-to-Monday week bounds (they depend on its timezone), plus its own `now`. With no `semester_id`, the active semester is the one containing today (the most recently started if they overlap), else the next to start, else the most recently ended.
 - **Notification is for in-app reminders, not a generic relay.** The plan: the gateway owns the WebSocket per user (an in-memory `user_id → socket` map), Notification calls the gateway over gRPC to push, and a persisted notifications table backs a feed for offline users, since push is fire-and-forget. It also needs a scheduled "due in 24h" check, because reminder time ≠ event time.
 - **Database-per-service:** `user_id` in the assignment DB is a plain UUID with no FK to `users`. It is trusted from the already-verified JWT. A `user.deleted` event from Auth was discussed and deliberately deferred.
 
 ### Protobuf / gRPC
 
-`proto/*.proto` is the source of truth. `authentication.proto` has `AuthenticationService`, and `assignment.proto` has `SemesterService`, `ClassService`, and `AssignmentService` (which also serves the read-only `ListAssignmentTypes`); `stats.proto` still needs to be written. Generated code (ts-proto with `outputServices=grpc-js`) is committed to each package under `src/generated/`, so after editing a `.proto` you must regenerate it in **every** package (gateway and each service). Never hand-edit `src/generated/`. ts-proto converts snake_case fields to camelCase (`google_auth_token` → `googleAuthToken`).
+`proto/*.proto` is the source of truth. `authentication.proto` has `AuthenticationService`, and `assignment.proto` has `SemesterService`, `ClassService`, and `AssignmentService` (which also serves the read-only `ListAssignmentTypes`); `stats.proto` has `StatsService`. Generated code (ts-proto with `outputServices=grpc-js`) is committed to each package under `src/generated/`, so after editing a `.proto` you must regenerate it in **every** package (gateway and each service). Never hand-edit `src/generated/`. ts-proto converts snake_case fields to camelCase (`google_auth_token` → `googleAuthToken`).
 
 ### Backend service layering
 
@@ -76,6 +79,9 @@ This pattern is established in `services/auth/src/`; follow it in the other serv
   - **Dates:** DATE columns travel over protobuf as `"YYYY-MM-DD"` strings.
   - **Deletes cascade:** `ON DELETE CASCADE` means deleting a semester silently removes its classes and assignments. Once Stats and Notification consume assignment events, cascading deletes must publish events too (e.g. one `semester.deleted`), or those consumers go stale.
 - The Redis client is connected in `index.ts` with `disableOfflineQueue: true`, so commands fail fast while Redis is down and cache-aside falls back to Postgres instead of hanging. Cache reads and writes are best effort, but a failed cache *invalidation* is an error, because it would let revoked tokens through until the TTL expires.
+  - **`disableOfflineQueue` doesn't cover a frozen or partitioned Redis** whose connection still looks open: a command already sent waits for its reply forever. node-redis's `commandOptions.timeout` doesn't help either, since it only bounds the wait *to be written*. Stats wraps every Redis call in its own 500ms timeout (`StatsCacheImpl`). Auth doesn't yet, so it hangs in that case.
+- **RabbitMQ connections use amqplib 2's built-in `recovery`** with `waitForConnect: false`, so a service starts even if the broker isn't up. Channels and consumers don't survive a reconnect and are recreated in `setup()`. The publisher uses a confirm channel, so a message written into a dying connection makes `publish()` reject (and get logged) instead of vanishing. Publishing is best effort after the commit; an outbox table would make it reliable.
+- gRPC servers bind `GRPC_PORT` when it's set (defaults 50052 / 50053), so a test instance can run beside the dev stack.
 
 ### Auth
 
@@ -84,7 +90,7 @@ This pattern is established in `services/auth/src/`; follow it in the other serv
 - Users are upserted by `google_id`, not email, because email can change. This is one atomic `INSERT … ON CONFLICT (google_id) DO UPDATE` (`upsertUserByGoogleId`), and `created` is true when the returned id is the newly generated one. Name, email, and avatar are overwritten from Google on every login. The avatar is optional. A soft-deleted user who signs in again is **restored** (`deleted_at = NULL`), and `SignInUser` returns `restored: true` so the frontend can say so. A `previous` CTE reads the row's pre-upsert `deleted_at`, because `RETURNING` only sees the new values. For now this works at any time after deletion; see Open work for the planned grace period. There's no password field and no "change Google account" feature.
 - **The JWT** is HS256 with a 7-day TTL, and its claims are only `{ sub, email, name, avatarUrl, tokenVersion }`. Don't sign the full `User`: its `Date`s become strings and then fail to re-encode as protobuf `Timestamp`s. `SoftValidateJwt` builds its returned `User` from those claims (no googleId or timestamps), so validation never needs a DB read for the profile.
 - **Revocation:** the `tokenVersion` claim is compared against `users.token_version`, cache-aside in Redis under `token-version:{userId}` (5-min TTL). **Logout bumps the version (atomically, `incrementTokenVersion`) and kills every session on every device.** This is a deliberate simplification, with no separate per-device logout. Account deletion is a soft delete (`deleted_at`), which also bumps the version and clears the Redis key. Repository reads ignore deleted users.
-- **Frontend:** the session UI isn't wired up yet. `Login.tsx` still has a TODO to post the code, and Dylan plans to implement this part himself. The plan is to store the JWT in `localStorage` (an accepted trade-off at this scale) and send it as `Authorization: Bearer <jwt>`.
+- **Frontend:** `Login.tsx` posts the code, the JWT is stored in `localStorage` (an accepted trade-off at this scale) and sent as `Authorization: Bearer <jwt>` by `apiClient`, `UserContextProvider` restores the session on load, and the header menu signs out. A 401 from any page's load signs the user out (`useGetJson`).
 
 ### Schema notes
 
@@ -100,7 +106,7 @@ The schemas live in `services/<name>/init.sql`.
   - **gRPC clients** live in `src/grpc/`. They are promise wrappers (`unary(...)`) around the generated clients with a 10s deadline, and they reject with the gRPC `ServiceError`. Express 5 forwards async rejections to the error handler, so route handlers just `await` and `throw`.
   - **Errors:** throw `HttpError(status, message)` for gateway-level validation. `errorHandler` maps gRPC statuses to HTTP (`INVALID_ARGUMENT` 400, `UNAUTHENTICATED` 401, `PERMISSION_DENIED` 403, `NOT_FOUND` 404, `ALREADY_EXISTS` 409, with the service's message passed through). `UNAVAILABLE` and `DEADLINE_EXCEEDED` become a generic 503, and everything else is a 500, with details only when `NODE_ENV=development`.
   - **Auth:** `middleware/requireAuth.ts` validates `Authorization: Bearer <jwt>` via `SoftValidateJwt` and exposes the user through `getAuthUser(res)`. Responses expose only `{ id, email, name, avatarUrl }`.
-  - **Endpoints:** `POST /auth/google { code }` returns `{ user, jwt, created, restored }` (201 if created, 200 if returning or restored). `GET /auth/me` returns `{ user }`. `POST /auth/logout` returns 204.
+  - **Endpoints:** `POST /auth/google { code }` returns `{ user, jwt, created, restored }` (201 if created, 200 if returning or restored). `GET /auth/me` returns `{ user }`. `POST /auth/logout` returns 204. `GET /stats/dashboard?today=YYYY-MM-DD&weekStart=&weekEnd=[&semesterId=]` (week bounds are ISO timestamps with an offset) returns `{ semester, progress, assignmentsDone, assignmentsTotal, classes, week, upcoming, overdue }`, where `semester`/`progress` are `null` when the user has no semesters.
 - **Frontend:** React 19, Vite, Tailwind v4, and `react-router` (not `react-router-dom`), with the React Compiler enabled through babel. Shared components live in `src/components/`, routes in `src/pages/`, and global state in `src/context/`.
   - **No non-null assertions (`x!`) on not-yet-loaded state inside component closures.** The React Compiler treats `data!.classes` in a callback as a plain `data.classes` dependency, and checks it on every render (even while `data` is still undefined, which crashes). It also stops guarding `data?.classes` elsewhere in the component. Pass the loaded value in as an argument from JSX that's already inside the `data && ...` guard instead.
   - **Context pattern:** each context is split into `XContext.tsx` (type + `createContext` defaults) and `XContextProvider.tsx` (state), and they're stacked in `App.tsx` via `ComposeProviders`.
@@ -131,15 +137,15 @@ The schemas live in `services/<name>/init.sql`.
 ## Open work
 
 - Gateway: WebSockets for notifications.
-- The stats, notification, and assignment packages don't build yet. Their generated code needs `@grpc/grpc-js` and `@types/node`, which they don't depend on. The old `services/*-service/` folders (just `node_modules`/`.pnpm-store`) are leftovers from the folder rename and can be deleted.
-- `stats.proto`, and the assignment parts of the Assignment Service (the proto is written).
-- Stats aggregation logic.
+- The notification package doesn't build yet: its generated code needs `@grpc/grpc-js`, which it doesn't depend on. The old `services/*-service/` folders (just `node_modules`/`.pnpm-store`) are leftovers from the folder rename and can be deleted.
+- An outbox table for assignment events, if lost events (and the stale-until-TTL dashboard they cause) start to matter.
+- Auth's Redis calls need the same per-call timeout as Stats (see Backend service layering).
 - Notification: the push mechanism, the notifications table, and the scheduled reminders.
 - **Due-soon reminders** (e.g. "due in 24h"). These fire on a schedule, not on a change, so events can't drive them: Notification needs a periodic job that scans every user's not-done assignments by `due`. That cross-user scan wants a partial index like `(due) WHERE done = false`, which the current `(user_id, due)` and `(class_id, due)` indexes don't serve.
 - **Account deletion: a 30-day grace period, then permanent deletion.** Signing in during the grace period restores the account (today that works with no time limit). After 30 days, a scheduled purge in auth-service hard-deletes the user and publishes `user.deleted` on RabbitMQ. Then the assignment service deletes their semesters (which cascade to classes and assignments), the stats service drops their cache, and the notification service deletes their notifications, with each consumer idempotent. Signing in after the purge creates a fresh account.
 - `POST /assignment-types`, so the type list can grow.
 - A Postgres migration tool.
-- Frontend: the shared UI (banner, modal, loading overlay, buttons, layout) is in place. The sign-in wiring (posting the code, storing the JWT, user/session context, header sign-out) is Dylan's to implement. The dashboard, CRUD UI, and account page are still to build.
+- Frontend: sign-in, the account page, CRUD pages for semesters, classes and assignments, and the dashboard are built. Still to come: a semester picker on the dashboard (the API already takes `semesterId`) and the notification feed.
 
 ## Working with Dylan
 

@@ -16,7 +16,8 @@ const startServer = (services: GrpcService[]) => {
         server.addService(definition, implementation);
     }
 
-    server.bindAsync(`0.0.0.0:50052`, ServerCredentials.createInsecure(), (err, port) => {
+    // GRPC_PORT lets a test instance run beside the dev stack, which already holds 50052
+    server.bindAsync(`0.0.0.0:${process.env.GRPC_PORT ?? 50052}`, ServerCredentials.createInsecure(), (err, port) => {
         if (err) {
             console.error("Server failed to bind: ", err);
             process.exit(1);

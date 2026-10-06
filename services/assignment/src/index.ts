@@ -3,7 +3,9 @@
 
 import { Pool, types } from "pg";
 
-import { NoopAssignmentEvents } from "./events/NoopAssignmentEvents";
+import { EventPublisher } from "./events/EventPublisher";
+import { NoopEventPublisher } from "./events/NoopEventPublisher";
+import { RabbitEventPublisher } from "./events/RabbitEventPublisher";
 import { AssignmentServiceService, ClassServiceService, SemesterServiceService } from "./generated/assignment";
 import assignmentGrpcImpl from "./grpc/assignmentGrpcImpl";
 import classGrpcImpl from "./grpc/classGrpcImpl";
@@ -26,16 +28,25 @@ const main = async () => {
         connectionString: process.env.DATABASE_URL
     });
 
+    // Initialize the event publisher; it connects in the background, so the service starts even if RabbitMQ is down
+    let events: EventPublisher = new NoopEventPublisher();
+    if (process.env.RABBITMQ_URL) {
+        const rabbit = new RabbitEventPublisher();
+        await rabbit.start(process.env.RABBITMQ_URL);
+        events = rabbit;
+    } else {
+        console.warn("RABBITMQ_URL is unset; events will not be published.");
+    }
+
     // Initialize Repositories
     const semesterRepository = new SemesterRepositoryImpl(dbPool);
     const classRepository = new ClassRepositoryImpl(dbPool);
     const assignmentRepository = new AssignmentRepositoryImpl(dbPool);
 
     // Initialize Services
-    const semesterService = new SemesterServiceImpl(semesterRepository);
-    const classService = new ClassServiceImpl(classRepository);
-    // publishes nothing yet; swap in a RabbitMQ publisher once Stats and Notification consume events
-    const assignmentService = new AssignmentServiceImpl(assignmentRepository, new NoopAssignmentEvents());
+    const semesterService = new SemesterServiceImpl(semesterRepository, events);
+    const classService = new ClassServiceImpl(classRepository, events);
+    const assignmentService = new AssignmentServiceImpl(assignmentRepository, events);
 
     // Register each generated *Service definition with its grpcImpl
     startServer([

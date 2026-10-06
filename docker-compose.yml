@@ -51,6 +51,7 @@ services:
         depends_on:
             - auth-service
             - assignment-service
+            - stats-service
             - redis
         networks:
             - backend_net
