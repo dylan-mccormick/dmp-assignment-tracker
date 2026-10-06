@@ -1,0 +1,173 @@
+// Semesters.tsx
+// The signed-in user's semesters: a list that opens each semester's edit pane, and a modal to create one
+
+import { Plus } from "lucide-react";
+import { useContext, useEffect, useState } from "react";
+
+import apiFetch, { readError } from "../apiClient";
+import PrimaryButton from "../components/PrimaryButton";
+import SemesterDetail from "../components/semesters/SemesterDetail";
+import SemesterForm, { type SemesterFormValues } from "../components/semesters/SemesterForm";
+import SplitPane, { SplitPaneItem } from "../components/SplitPane";
+import StandardLayout from "../components/StandardLayout";
+import TertiaryButton from "../components/TertiaryButton";
+import { JWT_STORAGE_KEY } from "../config";
+import { BannerContext } from "../context/BannerContext";
+import { LoadingBannerContext } from "../context/LoadingBannerContext";
+import { ModalContext } from "../context/ModalContext";
+import { LOGGED_OUT, UserContext } from "../context/UserContext";
+import { formatDate } from "../dates";
+import { compareSemesters, type Semester } from "../model/Semester";
+import { MAIN_NAV_ITEMS } from "../navItems";
+
+// Today as a local "YYYY-MM-DD" date, to mark the current semester
+const today = () => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+};
+
+const Semesters = () => {
+    // Context
+    const { setUser } = useContext(UserContext);
+    const { setBanner } = useContext(BannerContext);
+    const { showModal, closeModal } = useContext(ModalContext);
+    const { addProcess, removeProcess } = useContext(LoadingBannerContext);
+
+    // State
+    const [semesters, setSemesters] = useState<Semester[]>();
+    const [selectedId, setSelectedId] = useState<string>();
+
+    const selected = semesters?.find(s => s.id === selectedId);
+    const currentDate = today();
+
+    // Load the user's semesters
+    useEffect(() => {
+        const controller = new AbortController();
+        addProcess("loading_semesters");
+
+        const fetchSemesters = async () => {
+            try {
+                const res = await apiFetch("/semesters", { signal: controller.signal });
+
+                if (res.status === 401) {
+                    localStorage.removeItem(JWT_STORAGE_KEY);
+                    setUser(LOGGED_OUT);
+                    setBanner({ level: "error", message: await readError(res, "Please sign in again.") });
+                    return;
+                }
+                if (!res.ok) throw new Error(await readError(res, `GET /semesters failed with status ${res.status}`));
+
+                setSemesters((await res.json()).semesters);
+            } catch (error) {
+                if (controller.signal.aborted) return;
+                console.error(error);
+                setBanner({ level: "error", message: "Could not load your semesters. Please try again." });
+            } finally {
+                removeProcess("loading_semesters");
+            }
+        };
+
+        fetchSemesters();
+        return () => controller.abort();
+    }, [addProcess, removeProcess, setBanner, setUser]);
+
+    // Adds or replaces a semester, keeping the API's order
+    const upsertSemester = (semester: Semester) =>
+        setSemesters(list => [...(list ?? []).filter(s => s.id !== semester.id), semester].sort(compareSemesters));
+
+    const removeSemester = (semesterId: string) => {
+        setSemesters(list => list?.filter(s => s.id !== semesterId));
+        setSelectedId(id => (id === semesterId ? undefined : id));
+    };
+
+    const createSemester = async (values: SemesterFormValues) => {
+        let res: Response;
+        try {
+            res = await apiFetch("/semesters", { method: "POST", body: values });
+        } catch {
+            throw new Error("Could not reach the server. Please try again.");
+        }
+        if (!res.ok) throw new Error(await readError(res, "Could not create the semester. Please try again."));
+
+        const { semester } = await res.json();
+        upsertSemester(semester);
+        setSelectedId(semester.id);
+        closeModal();
+        setBanner({ level: "success", message: `Created "${semester.name}".` });
+    };
+
+    const openCreateModal = () =>
+        showModal({
+            type: "custom",
+            title: "New Semester",
+            content: (
+                <SemesterForm
+                    submitLabel="Create"
+                    submittingLabel="Creating..."
+                    onSubmit={createSemester}
+                    onCancel={closeModal}
+                />
+            )
+        });
+
+    return (
+        <StandardLayout
+            title="Semesters"
+            sidebar={MAIN_NAV_ITEMS}>
+            <div className="flex items-center justify-between gap-4 mb-8">
+                <h1 className="text-3xl font-extralight">Semesters</h1>
+                <PrimaryButton onClick={openCreateModal}>
+                    <span className="flex items-center gap-1">
+                        <Plus className="w-4 h-4" />
+                        New Semester
+                    </span>
+                </PrimaryButton>
+            </div>
+
+            {semesters?.length === 0 && (
+                <div className="text-center text-gray-600 py-16 space-y-2">
+                    <p>You don't have any semesters yet.</p>
+                    <TertiaryButton onClick={openCreateModal}>Create your first semester</TertiaryButton>
+                </div>
+            )}
+
+            {semesters && semesters.length > 0 && (
+                <SplitPane
+                    selectedKey={selected?.id}
+                    onSelect={setSelectedId}
+                    renderDetailTitle={() => selected?.name}
+                    renderDetail={() =>
+                        selected && (
+                            <SemesterDetail
+                                // remount after a save so the form's "unchanged" baseline is the saved semester
+                                key={`${selected.id}-${selected.updatedAt}`}
+                                semester={selected}
+                                onSaved={upsertSemester}
+                                onDeleted={removeSemester}
+                            />
+                        )
+                    }>
+                    {semesters.map(semester => (
+                        <SplitPaneItem
+                            key={semester.id}
+                            itemKey={semester.id}>
+                            <p className="flex items-center gap-2 min-w-0">
+                                <span className="truncate">{semester.name}</span>
+                                {semester.startDate <= currentDate && currentDate <= semester.endDate && (
+                                    <span className="shrink-0 text-xs px-2 py-0.5 rounded-full bg-blue-50 text-primary">
+                                        Current
+                                    </span>
+                                )}
+                            </p>
+                            <p className="text-sm text-gray-600">
+                                {formatDate(semester.startDate)} – {formatDate(semester.endDate)}
+                            </p>
+                        </SplitPaneItem>
+                    ))}
+                </SplitPane>
+            )}
+        </StandardLayout>
+    );
+};
+
+export default Semesters;

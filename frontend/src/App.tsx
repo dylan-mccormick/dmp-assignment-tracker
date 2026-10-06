@@ -12,11 +12,13 @@ import ComposeProviders from "./ComposeProviders";
 import BannerContextProvider from "./context/BannerContextProvider";
 import LoadingBannerContextProvider from "./context/LoadingBannerContextProvider";
 import ModalContextProvider from "./context/ModalContextProvider";
+import NavbarContextProvider from "./context/NavbarContextProvider";
 import UserContextProvider from "./context/UserContextProvider";
 import Account from "./pages/Account";
 import Dashboard from "./pages/Dashboard";
 import Login from "./pages/Login";
 import PageNotFound from "./pages/PageNotFound";
+import Semesters from "./pages/Semesters";
 
 const App = () => {
     return (
@@ -25,7 +27,8 @@ const App = () => {
                 LoadingBannerContextProvider,
                 ModalContextProvider,
                 BannerContextProvider,
-                UserContextProvider
+                UserContextProvider,
+                NavbarContextProvider
             ]}>
             <LoadingBanner />
             <Modal />
@@ -59,6 +62,14 @@ const App = () => {
                             element={
                                 <ProtectedRoute>
                                     <Account />
+                                </ProtectedRoute>
+                            }
+                        />
+                        <Route
+                            path="/semesters"
+                            element={
+                                <ProtectedRoute>
+                                    <Semesters />
                                 </ProtectedRoute>
                             }
                         />

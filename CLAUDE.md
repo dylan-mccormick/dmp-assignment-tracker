@@ -30,7 +30,7 @@ pnpm exec oxfmt        # format (frontend also has `pnpm format`)
 pnpm proto:generate    # backend packages only; regenerate gRPC TS from ../proto (requires protoc)
 ```
 
-A local, untracked `.git/hooks/pre-commit` (zsh) runs `pnpm oxlint`/`oxfmt` on staged `.ts`/`.tsx` files. It groups files by their nearest `package.json`, uses `(cd "$PKG_DIR" && pnpm ...)` subshells because `pnpm --dir` was unreliable, and re-stages the formatted files. It skips `*/generated/*`, so committed generated code stays exactly what ts-proto emits (re-running `proto:generate` on an unchanged proto should produce no diff). It needs `grealpath` (`brew install coreutils`). Watch for zsh-specific splitting when editing it: `${(f)VAR}` splits on newlines and `${=VAR}` splits on words.
+A local, untracked `.git/hooks/pre-commit` (zsh) runs `pnpm oxlint`/`oxfmt` on staged `.ts`/`.tsx` files. It groups files by their nearest `package.json`, uses `(cd "$PKG_DIR" && pnpm ...)` subshells because `pnpm --dir` was unreliable, and re-stages the formatted files, except partially staged ones (files that also have unstaged changes), which it formats in the working tree but leaves unstaged with a warning so the unstaged changes don't get swept into the commit. It skips `*/generated/*`, so committed generated code stays exactly what ts-proto emits (re-running `proto:generate` on an unchanged proto should produce no diff). It needs `grealpath` (`brew install coreutils`). Watch for zsh-specific splitting when editing it: `${(f)VAR}` splits on newlines and `${=VAR}` splits on words.
 
 ## Architecture
 
@@ -71,6 +71,10 @@ This pattern is established in `services/auth/src/`; follow it in the other serv
 - `grpcImpl.ts` adapts the service interface to the generated `*Server` type and routes every rejection through `handleMicroserviceError`, which always calls the callback. Unknown errors become `INTERNAL`.
 - `error/MicroserviceError.ts` carries a **gRPC `status`** `code` (not an HTTP code), a `userFacingMessage` (sent over gRPC as `details`), and a `loggingMessage`. Use `NOT_FOUND`, `ALREADY_EXISTS`, `INVALID_ARGUMENT`, and `UNAUTHENTICATED` for user-caused errors. The gateway passes their message straight to the user.
 - In repositories, map database errors inside each `try` but throw domain errors (e.g. `NOT_FOUND`) **outside** it, so they don't get rewrapped as `INTERNAL`. Unique violations (`23505`) map to `ALREADY_EXISTS`.
+- **Assignment service** (`services/assignment/src/`) uses the same layering. It will host several gRPC services (semesters, classes, assignments), so the error handler is shared in `error/handleMicroserviceError.ts`, and `startServer` takes a list of `{ definition, implementation }` to register. Rules for its data:
+  - **Ownership:** every request carries the `user_id` from the verified JWT (the gateway passes `getAuthUser(res).id`), and every query filters by it. Another user's row returns `NOT_FOUND`, never `PERMISSION_DENIED`, so its existence isn't revealed.
+  - **Dates:** DATE columns travel over protobuf as `"YYYY-MM-DD"` strings.
+  - **Deletes cascade:** `ON DELETE CASCADE` means deleting a semester silently removes its classes and assignments. Once Stats and Notification consume assignment events, cascading deletes must publish events too (e.g. one `semester.deleted`), or those consumers go stale.
 - The Redis client is connected in `index.ts` with `disableOfflineQueue: true`, so commands fail fast while Redis is down and cache-aside falls back to Postgres instead of hanging. Cache reads and writes are best effort, but a failed cache *invalidation* is an error, because it would let revoked tokens through until the TTL expires.
 
 ### Auth
@@ -87,6 +91,7 @@ This pattern is established in `services/auth/src/`; follow it in the other serv
 The schemas live in `services/<name>/init.sql`.
 - `user_id` is deliberately denormalized onto `classes` and `assignments` so the hottest query ("my assignments") avoids a 3-way join.
 - `assignments.done` is deliberately binary. The goal is tracking submission, not grading state.
+- `semesters` must satisfy `end_date >= start_date` (CHECK `semesters_end_after_start`). Same-day semesters are fine, and semesters **may overlap**. The service should also return a friendly `INVALID_ARGUMENT` before the constraint fires. `semesters` and `classes` have `created_at`/`updated_at` like `assignments`; as in auth, the app sets `updated_at` on update (there's no trigger).
 - `init.sql` is mounted into `docker-entrypoint-initdb.d`, so it **only runs on an empty data volume**. If a schema change isn't showing up, first check whether the volume was actually wiped. There's no migration tool yet.
 
 ### Gateway and frontend
