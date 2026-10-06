@@ -7,7 +7,8 @@ export class MicroserviceError extends Error {
     public code: status;
     public userFacingMessage: string;
     public loggingMessage: string;
-    public cause: any;
+    // no `cause` field: Error already has one, and with target ES2022 a declared field would be re-initialized to
+    // undefined right after super() set it, so every logged error lost its underlying cause
 
     /**
      * @param code The gRPC status code returned to the caller
