@@ -7,9 +7,7 @@ import { HttpError } from "../error/HttpError";
 import { Assignment } from "../generated/assignment";
 import assignmentService from "../grpc/assignmentService";
 import requireAuth, { getAuthUser } from "../middleware/requireAuth";
-
-// An ISO 8601 timestamp with an explicit offset; without one, `new Date()` would read it in the gateway's timezone
-const TIMESTAMP_PATTERN = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}:\d{2})$/;
+import readTimestamp from "../validation/readTimestamp";
 
 const STRING_FIELDS = ["classId", "typeId", "name"] as const;
 const OPTIONAL_STRING_FIELDS = ["notes"] as const;
@@ -47,24 +45,6 @@ const toPublicAssignment = (assignment: Assignment) => ({
 const requireAssignment = (assignment: Assignment | undefined) => {
     if (!assignment) throw new Error("Assignment service returned no assignment.");
     return toPublicAssignment(assignment);
-};
-
-// A real calendar date and time as written: `new Date()` silently rolls e.g. Feb 30 over to Mar 2
-const isRealTimestamp = (value: string) => {
-    const match = TIMESTAMP_PATTERN.exec(value);
-    if (!match || Number.isNaN(Date.parse(value))) return false;
-    const [year, month, day, hour, minute] = match.slice(1, 6).map(Number);
-    const date = new Date(Date.UTC(year, month - 1, day));
-    return date.getUTCMonth() === month - 1 && date.getUTCDate() === day && hour < 24 && minute < 60;
-};
-
-const readTimestamp = (field: string, value: unknown) => {
-    if (typeof value !== "string" || !isRealTimestamp(value))
-        throw new HttpError(
-            400,
-            `"${field}" must be an ISO 8601 timestamp with a timezone, e.g. "2026-09-20T23:59:00Z".`
-        );
-    return new Date(value);
 };
 
 /**

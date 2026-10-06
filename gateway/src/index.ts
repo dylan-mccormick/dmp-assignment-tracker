@@ -9,6 +9,7 @@ import assignmentTypeRoutes from "./endpoints/assignmentTypeRoutes";
 import authRoutes from "./endpoints/authRoutes";
 import classRoutes from "./endpoints/classRoutes";
 import semesterRoutes from "./endpoints/semesterRoutes";
+import statsRoutes from "./endpoints/statsRoutes";
 import errorHandler from "./errorHandler";
 import initAPI from "./initAPI";
 
@@ -20,6 +21,7 @@ app.use("/api/v1/semesters", semesterRoutes(Router()));
 app.use("/api/v1/classes", classRoutes(Router()));
 app.use("/api/v1/assignments", assignmentRoutes(Router()));
 app.use("/api/v1/assignment-types", assignmentTypeRoutes(Router()));
+app.use("/api/v1/stats", statsRoutes(Router()));
 
 app.use((_req, res) => {
     res.status(404).json({ error: "Not found." });
