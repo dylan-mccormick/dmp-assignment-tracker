@@ -73,3 +73,78 @@ service SemesterService {
     rpc UpdateSemester (UpdateSemesterRequest) returns (UpdateSemesterResponse);
     rpc DeleteSemester (DeleteSemesterRequest) returns (DeleteSemesterResponse);
 }
+
+// A class belongs to one of the user's semesters; its name is unique within that semester (ignoring case),
+// so the same class can be retaken in a different semester
+message Class {
+    string id = 1;
+    string semester_id = 2;
+    string name = 3;
+    string code = 4; // e.g. "CS 3700"
+    google.protobuf.Timestamp created_at = 5;
+    google.protobuf.Timestamp updated_at = 6;
+}
+
+// semester_id must be one of the user's semesters, or the request fails with NOT_FOUND
+message CreateClassRequest {
+    string user_id = 1;
+    string semester_id = 2;
+    string name = 3;
+    string code = 4;
+}
+
+message CreateClassResponse {
+    Class class = 1;
+}
+
+// Lists all of the user's classes, or only one semester's when semester_id is set
+// (a semester_id that isn't one of the user's semesters fails with NOT_FOUND rather than returning an empty list)
+message ListClassesRequest {
+    string user_id = 1;
+    optional string semester_id = 2;
+}
+
+message ListClassesResponse {
+    repeated Class classes = 1; // ordered by name
+}
+
+message GetClassRequest {
+    string user_id = 1;
+    string class_id = 2;
+}
+
+message GetClassResponse {
+    Class class = 1;
+}
+
+// Partial update: only the fields that are set are changed.
+// Setting semester_id moves the class (and its assignments) to that semester, which must be one of the user's.
+message UpdateClassRequest {
+    string user_id = 1;
+    string class_id = 2;
+    optional string semester_id = 3;
+    optional string name = 4;
+    optional string code = 5;
+}
+
+message UpdateClassResponse {
+    Class class = 1;
+}
+
+// Also deletes the class's assignments (ON DELETE CASCADE)
+message DeleteClassRequest {
+    string user_id = 1;
+    string class_id = 2;
+}
+
+message DeleteClassResponse {
+    bool deleted = 1;
+}
+
+service ClassService {
+    rpc CreateClass (CreateClassRequest) returns (CreateClassResponse);
+    rpc ListClasses (ListClassesRequest) returns (ListClassesResponse);
+    rpc GetClass (GetClassRequest) returns (GetClassResponse);
+    rpc UpdateClass (UpdateClassRequest) returns (UpdateClassResponse);
+    rpc DeleteClass (DeleteClassRequest) returns (DeleteClassResponse);
+}

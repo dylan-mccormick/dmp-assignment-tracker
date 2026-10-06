@@ -85,6 +85,81 @@ export interface DeleteSemesterResponse {
   deleted: boolean;
 }
 
+/**
+ * A class belongs to one of the user's semesters; its name is unique within that semester (ignoring case),
+ * so the same class can be retaken in a different semester
+ */
+export interface Class {
+  id: string;
+  semesterId: string;
+  name: string;
+  /** e.g. "CS 3700" */
+  code: string;
+  createdAt: Date | undefined;
+  updatedAt: Date | undefined;
+}
+
+/** semester_id must be one of the user's semesters, or the request fails with NOT_FOUND */
+export interface CreateClassRequest {
+  userId: string;
+  semesterId: string;
+  name: string;
+  code: string;
+}
+
+export interface CreateClassResponse {
+  class: Class | undefined;
+}
+
+/**
+ * Lists all of the user's classes, or only one semester's when semester_id is set
+ * (a semester_id that isn't one of the user's semesters fails with NOT_FOUND rather than returning an empty list)
+ */
+export interface ListClassesRequest {
+  userId: string;
+  semesterId?: string | undefined;
+}
+
+export interface ListClassesResponse {
+  /** ordered by name */
+  classes: Class[];
+}
+
+export interface GetClassRequest {
+  userId: string;
+  classId: string;
+}
+
+export interface GetClassResponse {
+  class: Class | undefined;
+}
+
+/**
+ * Partial update: only the fields that are set are changed.
+ * Setting semester_id moves the class (and its assignments) to that semester, which must be one of the user's.
+ */
+export interface UpdateClassRequest {
+  userId: string;
+  classId: string;
+  semesterId?: string | undefined;
+  name?: string | undefined;
+  code?: string | undefined;
+}
+
+export interface UpdateClassResponse {
+  class: Class | undefined;
+}
+
+/** Also deletes the class's assignments (ON DELETE CASCADE) */
+export interface DeleteClassRequest {
+  userId: string;
+  classId: string;
+}
+
+export interface DeleteClassResponse {
+  deleted: boolean;
+}
+
 function createBaseSemester(): Semester {
   return { id: "", name: "", startDate: "", endDate: "", createdAt: undefined, updatedAt: undefined };
 }
@@ -1132,6 +1207,1053 @@ export const DeleteSemesterResponse: MessageFns<DeleteSemesterResponse> = {
   },
 };
 
+function createBaseClass(): Class {
+  return { id: "", semesterId: "", name: "", code: "", createdAt: undefined, updatedAt: undefined };
+}
+
+export const Class: MessageFns<Class> = {
+  encode(message: Class, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.id !== "") {
+      writer.uint32(10).string(message.id);
+    }
+    if (message.semesterId !== "") {
+      writer.uint32(18).string(message.semesterId);
+    }
+    if (message.name !== "") {
+      writer.uint32(26).string(message.name);
+    }
+    if (message.code !== "") {
+      writer.uint32(34).string(message.code);
+    }
+    if (message.createdAt !== undefined) {
+      Timestamp.encode(toTimestamp(message.createdAt), writer.uint32(42).fork()).join();
+    }
+    if (message.updatedAt !== undefined) {
+      Timestamp.encode(toTimestamp(message.updatedAt), writer.uint32(50).fork()).join();
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): Class {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseClass();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
+
+            message.id = reader.string();
+            continue;
+          }
+          case 2: {
+            if (tag !== 18) {
+              break;
+            }
+
+            message.semesterId = reader.string();
+            continue;
+          }
+          case 3: {
+            if (tag !== 26) {
+              break;
+            }
+
+            message.name = reader.string();
+            continue;
+          }
+          case 4: {
+            if (tag !== 34) {
+              break;
+            }
+
+            message.code = reader.string();
+            continue;
+          }
+          case 5: {
+            if (tag !== 42) {
+              break;
+            }
+
+            message.createdAt = fromTimestamp(Timestamp.decode(reader, reader.uint32()));
+            continue;
+          }
+          case 6: {
+            if (tag !== 50) {
+              break;
+            }
+
+            message.updatedAt = fromTimestamp(Timestamp.decode(reader, reader.uint32()));
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
+
+  fromJSON(object: any): Class {
+    return {
+      id: isSet(object.id) ? globalThis.String(object.id) : "",
+      semesterId: isSet(object.semesterId)
+        ? globalThis.String(object.semesterId)
+        : isSet(object.semester_id)
+        ? globalThis.String(object.semester_id)
+        : "",
+      name: isSet(object.name) ? globalThis.String(object.name) : "",
+      code: isSet(object.code) ? globalThis.String(object.code) : "",
+      createdAt: isSet(object.createdAt)
+        ? fromJsonTimestamp(object.createdAt)
+        : isSet(object.created_at)
+        ? fromJsonTimestamp(object.created_at)
+        : undefined,
+      updatedAt: isSet(object.updatedAt)
+        ? fromJsonTimestamp(object.updatedAt)
+        : isSet(object.updated_at)
+        ? fromJsonTimestamp(object.updated_at)
+        : undefined,
+    };
+  },
+
+  toJSON(message: Class): unknown {
+    const obj: any = {};
+    if (message.id !== "") {
+      obj.id = message.id;
+    }
+    if (message.semesterId !== "") {
+      obj.semesterId = message.semesterId;
+    }
+    if (message.name !== "") {
+      obj.name = message.name;
+    }
+    if (message.code !== "") {
+      obj.code = message.code;
+    }
+    if (message.createdAt !== undefined) {
+      obj.createdAt = message.createdAt.toISOString();
+    }
+    if (message.updatedAt !== undefined) {
+      obj.updatedAt = message.updatedAt.toISOString();
+    }
+    return obj;
+  },
+
+  create<I extends Exact<DeepPartial<Class>, I>>(base?: I): Class {
+    return Class.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<Class>, I>>(object: I): Class {
+    const message = createBaseClass();
+    message.id = object.id ?? "";
+    message.semesterId = object.semesterId ?? "";
+    message.name = object.name ?? "";
+    message.code = object.code ?? "";
+    message.createdAt = object.createdAt ?? undefined;
+    message.updatedAt = object.updatedAt ?? undefined;
+    return message;
+  },
+};
+
+function createBaseCreateClassRequest(): CreateClassRequest {
+  return { userId: "", semesterId: "", name: "", code: "" };
+}
+
+export const CreateClassRequest: MessageFns<CreateClassRequest> = {
+  encode(message: CreateClassRequest, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.userId !== "") {
+      writer.uint32(10).string(message.userId);
+    }
+    if (message.semesterId !== "") {
+      writer.uint32(18).string(message.semesterId);
+    }
+    if (message.name !== "") {
+      writer.uint32(26).string(message.name);
+    }
+    if (message.code !== "") {
+      writer.uint32(34).string(message.code);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): CreateClassRequest {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseCreateClassRequest();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
+
+            message.userId = reader.string();
+            continue;
+          }
+          case 2: {
+            if (tag !== 18) {
+              break;
+            }
+
+            message.semesterId = reader.string();
+            continue;
+          }
+          case 3: {
+            if (tag !== 26) {
+              break;
+            }
+
+            message.name = reader.string();
+            continue;
+          }
+          case 4: {
+            if (tag !== 34) {
+              break;
+            }
+
+            message.code = reader.string();
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
+
+  fromJSON(object: any): CreateClassRequest {
+    return {
+      userId: isSet(object.userId)
+        ? globalThis.String(object.userId)
+        : isSet(object.user_id)
+        ? globalThis.String(object.user_id)
+        : "",
+      semesterId: isSet(object.semesterId)
+        ? globalThis.String(object.semesterId)
+        : isSet(object.semester_id)
+        ? globalThis.String(object.semester_id)
+        : "",
+      name: isSet(object.name) ? globalThis.String(object.name) : "",
+      code: isSet(object.code) ? globalThis.String(object.code) : "",
+    };
+  },
+
+  toJSON(message: CreateClassRequest): unknown {
+    const obj: any = {};
+    if (message.userId !== "") {
+      obj.userId = message.userId;
+    }
+    if (message.semesterId !== "") {
+      obj.semesterId = message.semesterId;
+    }
+    if (message.name !== "") {
+      obj.name = message.name;
+    }
+    if (message.code !== "") {
+      obj.code = message.code;
+    }
+    return obj;
+  },
+
+  create<I extends Exact<DeepPartial<CreateClassRequest>, I>>(base?: I): CreateClassRequest {
+    return CreateClassRequest.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<CreateClassRequest>, I>>(object: I): CreateClassRequest {
+    const message = createBaseCreateClassRequest();
+    message.userId = object.userId ?? "";
+    message.semesterId = object.semesterId ?? "";
+    message.name = object.name ?? "";
+    message.code = object.code ?? "";
+    return message;
+  },
+};
+
+function createBaseCreateClassResponse(): CreateClassResponse {
+  return { class: undefined };
+}
+
+export const CreateClassResponse: MessageFns<CreateClassResponse> = {
+  encode(message: CreateClassResponse, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.class !== undefined) {
+      Class.encode(message.class, writer.uint32(10).fork()).join();
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): CreateClassResponse {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseCreateClassResponse();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
+
+            message.class = Class.decode(reader, reader.uint32());
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
+
+  fromJSON(object: any): CreateClassResponse {
+    return { class: isSet(object.class) ? Class.fromJSON(object.class) : undefined };
+  },
+
+  toJSON(message: CreateClassResponse): unknown {
+    const obj: any = {};
+    if (message.class !== undefined) {
+      obj.class = Class.toJSON(message.class);
+    }
+    return obj;
+  },
+
+  create<I extends Exact<DeepPartial<CreateClassResponse>, I>>(base?: I): CreateClassResponse {
+    return CreateClassResponse.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<CreateClassResponse>, I>>(object: I): CreateClassResponse {
+    const message = createBaseCreateClassResponse();
+    message.class = (object.class !== undefined && object.class !== null) ? Class.fromPartial(object.class) : undefined;
+    return message;
+  },
+};
+
+function createBaseListClassesRequest(): ListClassesRequest {
+  return { userId: "", semesterId: undefined };
+}
+
+export const ListClassesRequest: MessageFns<ListClassesRequest> = {
+  encode(message: ListClassesRequest, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.userId !== "") {
+      writer.uint32(10).string(message.userId);
+    }
+    if (message.semesterId !== undefined) {
+      writer.uint32(18).string(message.semesterId);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): ListClassesRequest {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseListClassesRequest();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
+
+            message.userId = reader.string();
+            continue;
+          }
+          case 2: {
+            if (tag !== 18) {
+              break;
+            }
+
+            message.semesterId = reader.string();
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
+
+  fromJSON(object: any): ListClassesRequest {
+    return {
+      userId: isSet(object.userId)
+        ? globalThis.String(object.userId)
+        : isSet(object.user_id)
+        ? globalThis.String(object.user_id)
+        : "",
+      semesterId: isSet(object.semesterId)
+        ? globalThis.String(object.semesterId)
+        : isSet(object.semester_id)
+        ? globalThis.String(object.semester_id)
+        : undefined,
+    };
+  },
+
+  toJSON(message: ListClassesRequest): unknown {
+    const obj: any = {};
+    if (message.userId !== "") {
+      obj.userId = message.userId;
+    }
+    if (message.semesterId !== undefined) {
+      obj.semesterId = message.semesterId;
+    }
+    return obj;
+  },
+
+  create<I extends Exact<DeepPartial<ListClassesRequest>, I>>(base?: I): ListClassesRequest {
+    return ListClassesRequest.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<ListClassesRequest>, I>>(object: I): ListClassesRequest {
+    const message = createBaseListClassesRequest();
+    message.userId = object.userId ?? "";
+    message.semesterId = object.semesterId ?? undefined;
+    return message;
+  },
+};
+
+function createBaseListClassesResponse(): ListClassesResponse {
+  return { classes: [] };
+}
+
+export const ListClassesResponse: MessageFns<ListClassesResponse> = {
+  encode(message: ListClassesResponse, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    for (const v of message.classes) {
+      Class.encode(v!, writer.uint32(10).fork()).join();
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): ListClassesResponse {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseListClassesResponse();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
+
+            message.classes.push(Class.decode(reader, reader.uint32()));
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
+
+  fromJSON(object: any): ListClassesResponse {
+    return {
+      classes: globalThis.Array.isArray(object?.classes) ? object.classes.map((e: any) => Class.fromJSON(e)) : [],
+    };
+  },
+
+  toJSON(message: ListClassesResponse): unknown {
+    const obj: any = {};
+    if (message.classes?.length) {
+      obj.classes = message.classes.map((e) => Class.toJSON(e));
+    }
+    return obj;
+  },
+
+  create<I extends Exact<DeepPartial<ListClassesResponse>, I>>(base?: I): ListClassesResponse {
+    return ListClassesResponse.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<ListClassesResponse>, I>>(object: I): ListClassesResponse {
+    const message = createBaseListClassesResponse();
+    message.classes = object.classes?.map((e) => Class.fromPartial(e)) || [];
+    return message;
+  },
+};
+
+function createBaseGetClassRequest(): GetClassRequest {
+  return { userId: "", classId: "" };
+}
+
+export const GetClassRequest: MessageFns<GetClassRequest> = {
+  encode(message: GetClassRequest, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.userId !== "") {
+      writer.uint32(10).string(message.userId);
+    }
+    if (message.classId !== "") {
+      writer.uint32(18).string(message.classId);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): GetClassRequest {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseGetClassRequest();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
+
+            message.userId = reader.string();
+            continue;
+          }
+          case 2: {
+            if (tag !== 18) {
+              break;
+            }
+
+            message.classId = reader.string();
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
+
+  fromJSON(object: any): GetClassRequest {
+    return {
+      userId: isSet(object.userId)
+        ? globalThis.String(object.userId)
+        : isSet(object.user_id)
+        ? globalThis.String(object.user_id)
+        : "",
+      classId: isSet(object.classId)
+        ? globalThis.String(object.classId)
+        : isSet(object.class_id)
+        ? globalThis.String(object.class_id)
+        : "",
+    };
+  },
+
+  toJSON(message: GetClassRequest): unknown {
+    const obj: any = {};
+    if (message.userId !== "") {
+      obj.userId = message.userId;
+    }
+    if (message.classId !== "") {
+      obj.classId = message.classId;
+    }
+    return obj;
+  },
+
+  create<I extends Exact<DeepPartial<GetClassRequest>, I>>(base?: I): GetClassRequest {
+    return GetClassRequest.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<GetClassRequest>, I>>(object: I): GetClassRequest {
+    const message = createBaseGetClassRequest();
+    message.userId = object.userId ?? "";
+    message.classId = object.classId ?? "";
+    return message;
+  },
+};
+
+function createBaseGetClassResponse(): GetClassResponse {
+  return { class: undefined };
+}
+
+export const GetClassResponse: MessageFns<GetClassResponse> = {
+  encode(message: GetClassResponse, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.class !== undefined) {
+      Class.encode(message.class, writer.uint32(10).fork()).join();
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): GetClassResponse {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseGetClassResponse();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
+
+            message.class = Class.decode(reader, reader.uint32());
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
+
+  fromJSON(object: any): GetClassResponse {
+    return { class: isSet(object.class) ? Class.fromJSON(object.class) : undefined };
+  },
+
+  toJSON(message: GetClassResponse): unknown {
+    const obj: any = {};
+    if (message.class !== undefined) {
+      obj.class = Class.toJSON(message.class);
+    }
+    return obj;
+  },
+
+  create<I extends Exact<DeepPartial<GetClassResponse>, I>>(base?: I): GetClassResponse {
+    return GetClassResponse.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<GetClassResponse>, I>>(object: I): GetClassResponse {
+    const message = createBaseGetClassResponse();
+    message.class = (object.class !== undefined && object.class !== null) ? Class.fromPartial(object.class) : undefined;
+    return message;
+  },
+};
+
+function createBaseUpdateClassRequest(): UpdateClassRequest {
+  return { userId: "", classId: "", semesterId: undefined, name: undefined, code: undefined };
+}
+
+export const UpdateClassRequest: MessageFns<UpdateClassRequest> = {
+  encode(message: UpdateClassRequest, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.userId !== "") {
+      writer.uint32(10).string(message.userId);
+    }
+    if (message.classId !== "") {
+      writer.uint32(18).string(message.classId);
+    }
+    if (message.semesterId !== undefined) {
+      writer.uint32(26).string(message.semesterId);
+    }
+    if (message.name !== undefined) {
+      writer.uint32(34).string(message.name);
+    }
+    if (message.code !== undefined) {
+      writer.uint32(42).string(message.code);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): UpdateClassRequest {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseUpdateClassRequest();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
+
+            message.userId = reader.string();
+            continue;
+          }
+          case 2: {
+            if (tag !== 18) {
+              break;
+            }
+
+            message.classId = reader.string();
+            continue;
+          }
+          case 3: {
+            if (tag !== 26) {
+              break;
+            }
+
+            message.semesterId = reader.string();
+            continue;
+          }
+          case 4: {
+            if (tag !== 34) {
+              break;
+            }
+
+            message.name = reader.string();
+            continue;
+          }
+          case 5: {
+            if (tag !== 42) {
+              break;
+            }
+
+            message.code = reader.string();
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
+
+  fromJSON(object: any): UpdateClassRequest {
+    return {
+      userId: isSet(object.userId)
+        ? globalThis.String(object.userId)
+        : isSet(object.user_id)
+        ? globalThis.String(object.user_id)
+        : "",
+      classId: isSet(object.classId)
+        ? globalThis.String(object.classId)
+        : isSet(object.class_id)
+        ? globalThis.String(object.class_id)
+        : "",
+      semesterId: isSet(object.semesterId)
+        ? globalThis.String(object.semesterId)
+        : isSet(object.semester_id)
+        ? globalThis.String(object.semester_id)
+        : undefined,
+      name: isSet(object.name) ? globalThis.String(object.name) : undefined,
+      code: isSet(object.code) ? globalThis.String(object.code) : undefined,
+    };
+  },
+
+  toJSON(message: UpdateClassRequest): unknown {
+    const obj: any = {};
+    if (message.userId !== "") {
+      obj.userId = message.userId;
+    }
+    if (message.classId !== "") {
+      obj.classId = message.classId;
+    }
+    if (message.semesterId !== undefined) {
+      obj.semesterId = message.semesterId;
+    }
+    if (message.name !== undefined) {
+      obj.name = message.name;
+    }
+    if (message.code !== undefined) {
+      obj.code = message.code;
+    }
+    return obj;
+  },
+
+  create<I extends Exact<DeepPartial<UpdateClassRequest>, I>>(base?: I): UpdateClassRequest {
+    return UpdateClassRequest.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<UpdateClassRequest>, I>>(object: I): UpdateClassRequest {
+    const message = createBaseUpdateClassRequest();
+    message.userId = object.userId ?? "";
+    message.classId = object.classId ?? "";
+    message.semesterId = object.semesterId ?? undefined;
+    message.name = object.name ?? undefined;
+    message.code = object.code ?? undefined;
+    return message;
+  },
+};
+
+function createBaseUpdateClassResponse(): UpdateClassResponse {
+  return { class: undefined };
+}
+
+export const UpdateClassResponse: MessageFns<UpdateClassResponse> = {
+  encode(message: UpdateClassResponse, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.class !== undefined) {
+      Class.encode(message.class, writer.uint32(10).fork()).join();
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): UpdateClassResponse {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseUpdateClassResponse();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
+
+            message.class = Class.decode(reader, reader.uint32());
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
+
+  fromJSON(object: any): UpdateClassResponse {
+    return { class: isSet(object.class) ? Class.fromJSON(object.class) : undefined };
+  },
+
+  toJSON(message: UpdateClassResponse): unknown {
+    const obj: any = {};
+    if (message.class !== undefined) {
+      obj.class = Class.toJSON(message.class);
+    }
+    return obj;
+  },
+
+  create<I extends Exact<DeepPartial<UpdateClassResponse>, I>>(base?: I): UpdateClassResponse {
+    return UpdateClassResponse.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<UpdateClassResponse>, I>>(object: I): UpdateClassResponse {
+    const message = createBaseUpdateClassResponse();
+    message.class = (object.class !== undefined && object.class !== null) ? Class.fromPartial(object.class) : undefined;
+    return message;
+  },
+};
+
+function createBaseDeleteClassRequest(): DeleteClassRequest {
+  return { userId: "", classId: "" };
+}
+
+export const DeleteClassRequest: MessageFns<DeleteClassRequest> = {
+  encode(message: DeleteClassRequest, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.userId !== "") {
+      writer.uint32(10).string(message.userId);
+    }
+    if (message.classId !== "") {
+      writer.uint32(18).string(message.classId);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): DeleteClassRequest {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseDeleteClassRequest();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
+
+            message.userId = reader.string();
+            continue;
+          }
+          case 2: {
+            if (tag !== 18) {
+              break;
+            }
+
+            message.classId = reader.string();
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
+
+  fromJSON(object: any): DeleteClassRequest {
+    return {
+      userId: isSet(object.userId)
+        ? globalThis.String(object.userId)
+        : isSet(object.user_id)
+        ? globalThis.String(object.user_id)
+        : "",
+      classId: isSet(object.classId)
+        ? globalThis.String(object.classId)
+        : isSet(object.class_id)
+        ? globalThis.String(object.class_id)
+        : "",
+    };
+  },
+
+  toJSON(message: DeleteClassRequest): unknown {
+    const obj: any = {};
+    if (message.userId !== "") {
+      obj.userId = message.userId;
+    }
+    if (message.classId !== "") {
+      obj.classId = message.classId;
+    }
+    return obj;
+  },
+
+  create<I extends Exact<DeepPartial<DeleteClassRequest>, I>>(base?: I): DeleteClassRequest {
+    return DeleteClassRequest.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<DeleteClassRequest>, I>>(object: I): DeleteClassRequest {
+    const message = createBaseDeleteClassRequest();
+    message.userId = object.userId ?? "";
+    message.classId = object.classId ?? "";
+    return message;
+  },
+};
+
+function createBaseDeleteClassResponse(): DeleteClassResponse {
+  return { deleted: false };
+}
+
+export const DeleteClassResponse: MessageFns<DeleteClassResponse> = {
+  encode(message: DeleteClassResponse, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.deleted !== false) {
+      writer.uint32(8).bool(message.deleted);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): DeleteClassResponse {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseDeleteClassResponse();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 8) {
+              break;
+            }
+
+            message.deleted = reader.bool();
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
+
+  fromJSON(object: any): DeleteClassResponse {
+    return { deleted: isSet(object.deleted) ? globalThis.Boolean(object.deleted) : false };
+  },
+
+  toJSON(message: DeleteClassResponse): unknown {
+    const obj: any = {};
+    if (message.deleted !== false) {
+      obj.deleted = message.deleted;
+    }
+    return obj;
+  },
+
+  create<I extends Exact<DeepPartial<DeleteClassResponse>, I>>(base?: I): DeleteClassResponse {
+    return DeleteClassResponse.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<DeleteClassResponse>, I>>(object: I): DeleteClassResponse {
+    const message = createBaseDeleteClassResponse();
+    message.deleted = object.deleted ?? false;
+    return message;
+  },
+};
+
 export type SemesterServiceService = typeof SemesterServiceService;
 export const SemesterServiceService = {
   createSemester: {
@@ -1280,6 +2402,150 @@ export const SemesterServiceClient = makeGenericClientConstructor(
 ) as unknown as {
   new (address: string, credentials: ChannelCredentials, options?: Partial<ClientOptions>): SemesterServiceClient;
   service: typeof SemesterServiceService;
+  serviceName: string;
+};
+
+export type ClassServiceService = typeof ClassServiceService;
+export const ClassServiceService = {
+  createClass: {
+    path: "/assignment.ClassService/CreateClass" as const,
+    requestStream: false as const,
+    responseStream: false as const,
+    requestSerialize: (value: CreateClassRequest): Buffer => Buffer.from(CreateClassRequest.encode(value).finish()),
+    requestDeserialize: (value: Buffer): CreateClassRequest => CreateClassRequest.decode(value),
+    responseSerialize: (value: CreateClassResponse): Buffer => Buffer.from(CreateClassResponse.encode(value).finish()),
+    responseDeserialize: (value: Buffer): CreateClassResponse => CreateClassResponse.decode(value),
+  },
+  listClasses: {
+    path: "/assignment.ClassService/ListClasses" as const,
+    requestStream: false as const,
+    responseStream: false as const,
+    requestSerialize: (value: ListClassesRequest): Buffer => Buffer.from(ListClassesRequest.encode(value).finish()),
+    requestDeserialize: (value: Buffer): ListClassesRequest => ListClassesRequest.decode(value),
+    responseSerialize: (value: ListClassesResponse): Buffer => Buffer.from(ListClassesResponse.encode(value).finish()),
+    responseDeserialize: (value: Buffer): ListClassesResponse => ListClassesResponse.decode(value),
+  },
+  getClass: {
+    path: "/assignment.ClassService/GetClass" as const,
+    requestStream: false as const,
+    responseStream: false as const,
+    requestSerialize: (value: GetClassRequest): Buffer => Buffer.from(GetClassRequest.encode(value).finish()),
+    requestDeserialize: (value: Buffer): GetClassRequest => GetClassRequest.decode(value),
+    responseSerialize: (value: GetClassResponse): Buffer => Buffer.from(GetClassResponse.encode(value).finish()),
+    responseDeserialize: (value: Buffer): GetClassResponse => GetClassResponse.decode(value),
+  },
+  updateClass: {
+    path: "/assignment.ClassService/UpdateClass" as const,
+    requestStream: false as const,
+    responseStream: false as const,
+    requestSerialize: (value: UpdateClassRequest): Buffer => Buffer.from(UpdateClassRequest.encode(value).finish()),
+    requestDeserialize: (value: Buffer): UpdateClassRequest => UpdateClassRequest.decode(value),
+    responseSerialize: (value: UpdateClassResponse): Buffer => Buffer.from(UpdateClassResponse.encode(value).finish()),
+    responseDeserialize: (value: Buffer): UpdateClassResponse => UpdateClassResponse.decode(value),
+  },
+  deleteClass: {
+    path: "/assignment.ClassService/DeleteClass" as const,
+    requestStream: false as const,
+    responseStream: false as const,
+    requestSerialize: (value: DeleteClassRequest): Buffer => Buffer.from(DeleteClassRequest.encode(value).finish()),
+    requestDeserialize: (value: Buffer): DeleteClassRequest => DeleteClassRequest.decode(value),
+    responseSerialize: (value: DeleteClassResponse): Buffer => Buffer.from(DeleteClassResponse.encode(value).finish()),
+    responseDeserialize: (value: Buffer): DeleteClassResponse => DeleteClassResponse.decode(value),
+  },
+} as const;
+
+export interface ClassServiceServer extends UntypedServiceImplementation {
+  createClass: handleUnaryCall<CreateClassRequest, CreateClassResponse>;
+  listClasses: handleUnaryCall<ListClassesRequest, ListClassesResponse>;
+  getClass: handleUnaryCall<GetClassRequest, GetClassResponse>;
+  updateClass: handleUnaryCall<UpdateClassRequest, UpdateClassResponse>;
+  deleteClass: handleUnaryCall<DeleteClassRequest, DeleteClassResponse>;
+}
+
+export interface ClassServiceClient extends Client {
+  createClass(
+    request: CreateClassRequest,
+    callback: (error: ServiceError | null, response: CreateClassResponse) => void,
+  ): ClientUnaryCall;
+  createClass(
+    request: CreateClassRequest,
+    metadata: Metadata,
+    callback: (error: ServiceError | null, response: CreateClassResponse) => void,
+  ): ClientUnaryCall;
+  createClass(
+    request: CreateClassRequest,
+    metadata: Metadata,
+    options: Partial<CallOptions>,
+    callback: (error: ServiceError | null, response: CreateClassResponse) => void,
+  ): ClientUnaryCall;
+  listClasses(
+    request: ListClassesRequest,
+    callback: (error: ServiceError | null, response: ListClassesResponse) => void,
+  ): ClientUnaryCall;
+  listClasses(
+    request: ListClassesRequest,
+    metadata: Metadata,
+    callback: (error: ServiceError | null, response: ListClassesResponse) => void,
+  ): ClientUnaryCall;
+  listClasses(
+    request: ListClassesRequest,
+    metadata: Metadata,
+    options: Partial<CallOptions>,
+    callback: (error: ServiceError | null, response: ListClassesResponse) => void,
+  ): ClientUnaryCall;
+  getClass(
+    request: GetClassRequest,
+    callback: (error: ServiceError | null, response: GetClassResponse) => void,
+  ): ClientUnaryCall;
+  getClass(
+    request: GetClassRequest,
+    metadata: Metadata,
+    callback: (error: ServiceError | null, response: GetClassResponse) => void,
+  ): ClientUnaryCall;
+  getClass(
+    request: GetClassRequest,
+    metadata: Metadata,
+    options: Partial<CallOptions>,
+    callback: (error: ServiceError | null, response: GetClassResponse) => void,
+  ): ClientUnaryCall;
+  updateClass(
+    request: UpdateClassRequest,
+    callback: (error: ServiceError | null, response: UpdateClassResponse) => void,
+  ): ClientUnaryCall;
+  updateClass(
+    request: UpdateClassRequest,
+    metadata: Metadata,
+    callback: (error: ServiceError | null, response: UpdateClassResponse) => void,
+  ): ClientUnaryCall;
+  updateClass(
+    request: UpdateClassRequest,
+    metadata: Metadata,
+    options: Partial<CallOptions>,
+    callback: (error: ServiceError | null, response: UpdateClassResponse) => void,
+  ): ClientUnaryCall;
+  deleteClass(
+    request: DeleteClassRequest,
+    callback: (error: ServiceError | null, response: DeleteClassResponse) => void,
+  ): ClientUnaryCall;
+  deleteClass(
+    request: DeleteClassRequest,
+    metadata: Metadata,
+    callback: (error: ServiceError | null, response: DeleteClassResponse) => void,
+  ): ClientUnaryCall;
+  deleteClass(
+    request: DeleteClassRequest,
+    metadata: Metadata,
+    options: Partial<CallOptions>,
+    callback: (error: ServiceError | null, response: DeleteClassResponse) => void,
+  ): ClientUnaryCall;
+}
+
+export const ClassServiceClient = makeGenericClientConstructor(
+  ClassServiceService,
+  "assignment.ClassService",
+) as unknown as {
+  new (address: string, credentials: ChannelCredentials, options?: Partial<ClientOptions>): ClassServiceClient;
+  service: typeof ClassServiceService;
   serviceName: string;
 };
 
