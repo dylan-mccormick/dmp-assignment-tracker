@@ -1,7 +1,7 @@
 // TypesChart.tsx
 // The Recharts bars for TypesCard, in its own module so Recharts is only downloaded with the dashboard
 
-import { Bar, BarChart, LabelList, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { Bar, BarChart, LabelList, ResponsiveContainer, XAxis, YAxis } from "recharts";
 
 import { RING_FILL, RING_TRACK } from "./ringColors";
 
@@ -32,10 +32,6 @@ const TypesChart = ({ types }: TypesChartProps) => {
                     tickLine={false}
                     axisLine={false}
                     tick={{ fill: "#4b5563", fontSize: 12 }}
-                />
-                <Tooltip
-                    cursor={{ fill: "#f3f4f6" }}
-                    formatter={(value, name) => [value, name === "done" ? "Done" : "To do"]}
                 />
                 {/* a 2px surface gap between the stacked segments; the far end of each bar is rounded */}
                 <Bar

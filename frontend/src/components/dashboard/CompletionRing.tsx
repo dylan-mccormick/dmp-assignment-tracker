@@ -1,7 +1,7 @@
 // CompletionRing.tsx
 // The Recharts ring for CompletionCard, in its own module so Recharts is only downloaded with the dashboard
 
-import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
+import { Cell, Pie, PieChart, ResponsiveContainer } from "recharts";
 
 import { RING_FILL, RING_TRACK } from "./ringColors";
 
@@ -11,7 +11,6 @@ interface CompletionRingProps {
 }
 
 const CompletionRing = ({ done, toDo }: CompletionRingProps) => {
-    const total = done + toDo;
     const slices = [
         { name: "Done", value: done, color: RING_FILL },
         { name: "To do", value: toDo, color: RING_TRACK }
@@ -39,9 +38,6 @@ const CompletionRing = ({ done, toDo }: CompletionRingProps) => {
                         />
                     ))}
                 </Pie>
-                <Tooltip
-                    formatter={(value, name) => [`${value} (${Math.round((Number(value) / total) * 100)}%)`, name]}
-                />
             </PieChart>
         </ResponsiveContainer>
     );
