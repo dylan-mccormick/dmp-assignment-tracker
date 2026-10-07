@@ -3,7 +3,7 @@
 
 import { Bar, BarChart, LabelList, ResponsiveContainer, XAxis, YAxis } from "recharts";
 
-import { RING_FILL, RING_TRACK } from "./ringColors";
+import { CHART_LABEL, CHART_SURFACE, RING_FILL, RING_TRACK } from "./ringColors";
 
 interface TypesChartProps {
     types: { type: string; done: number; total: number }[];
@@ -31,14 +31,14 @@ const TypesChart = ({ types }: TypesChartProps) => {
                     width={76}
                     tickLine={false}
                     axisLine={false}
-                    tick={{ fill: "#4b5563", fontSize: 12 }}
+                    tick={{ fill: CHART_LABEL, fontSize: 12 }}
                 />
                 {/* a 2px surface gap between the stacked segments; the far end of each bar is rounded */}
                 <Bar
                     dataKey="done"
                     stackId="type"
                     fill={RING_FILL}
-                    stroke="#ffffff"
+                    stroke={CHART_SURFACE}
                     strokeWidth={2}
                     isAnimationActive={animate}
                 />
@@ -46,7 +46,7 @@ const TypesChart = ({ types }: TypesChartProps) => {
                     dataKey="toDo"
                     stackId="type"
                     fill={RING_TRACK}
-                    stroke="#ffffff"
+                    stroke={CHART_SURFACE}
                     strokeWidth={2}
                     radius={[0, 4, 4, 0]}
                     isAnimationActive={animate}>
@@ -54,7 +54,7 @@ const TypesChart = ({ types }: TypesChartProps) => {
                     <LabelList
                         dataKey="label"
                         position="right"
-                        fill="#4b5563"
+                        fill={CHART_LABEL}
                         fontSize={12}
                     />
                 </Bar>

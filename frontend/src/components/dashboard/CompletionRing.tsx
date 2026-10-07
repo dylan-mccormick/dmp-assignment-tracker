@@ -3,7 +3,7 @@
 
 import { Cell, Pie, PieChart, ResponsiveContainer } from "recharts";
 
-import { RING_FILL, RING_TRACK } from "./ringColors";
+import { CHART_SURFACE, RING_FILL, RING_TRACK } from "./ringColors";
 
 interface CompletionRingProps {
     done: number;
@@ -28,7 +28,7 @@ const CompletionRing = ({ done, toDo }: CompletionRingProps) => {
                     startAngle={90}
                     endAngle={-270}
                     // a 2px surface gap between the segments, not a border
-                    stroke="#ffffff"
+                    stroke={CHART_SURFACE}
                     strokeWidth={2}
                     isAnimationActive={!window.matchMedia("(prefers-reduced-motion: reduce)").matches}>
                     {slices.map(slice => (

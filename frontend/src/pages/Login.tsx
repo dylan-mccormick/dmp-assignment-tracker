@@ -101,7 +101,7 @@ const Login = () => {
                 sidebar={[]}>
                 <div className="flex flex-col items-center justify-center h-full">
                     <img
-                        className="w-24 h-24 mb-8"
+                        className="w-24 h-24 mb-8 dark:invert"
                         alt="DMP Service Logo"
                         src="https://cdn.mnmzc.dev/logos/dmp-black.png"
                     />

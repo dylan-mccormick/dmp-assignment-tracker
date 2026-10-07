@@ -33,7 +33,7 @@ const Modal = () => {
     return (
         <div
             onTransitionEnd={handleTransitionEnd}
-            className={`fixed inset-0 bg-black/50 z-50 flex items-center justify-center transition-opacity duration-150 ease-out starting:opacity-0 motion-reduce:transition-none ${closing ? "opacity-0 pointer-events-none" : "opacity-100"}`}>
+            className={`fixed inset-0 bg-overlay z-50 flex items-center justify-center transition-opacity duration-150 ease-out starting:opacity-0 motion-reduce:transition-none ${closing ? "opacity-0 pointer-events-none" : "opacity-100"}`}>
             <div
                 role="dialog"
                 aria-modal="true"
