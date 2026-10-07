@@ -35,7 +35,7 @@ const StandardHeader = ({ hideNavbar, toggleNav }: StandardHeaderProps) => {
                         className="button-link no-underline flex items-center h-16"
                         to="/">
                         <img
-                            className="h-full ml-2 mr-2 py-2"
+                            className="h-full ml-2 mr-2 py-2 dark:invert"
                             alt="DMP Service Logo"
                             src="https://cdn.mnmzc.dev/logos/dmp-black.png"></img>
                         <h3 className="text-lg ml-2 mr-2 hover:text-black active:text-black text-black">

@@ -90,6 +90,11 @@ const Assignments = () => {
     const search = searchParams.get(PARAMS.search) ?? "";
     const pageSize = readPageSize(searchParams);
     const matching = data ? applyFilters(data.assignments, filters, search) : [];
+    // completed assignments the default view is hiding from this search/filter (to say so when nothing else matches)
+    const hiddenDone =
+        data && !filters.showDone
+            ? applyFilters(data.assignments, { ...filters, showDone: true }, search).length - matching.length
+            : 0;
     const { page, items: pageItems } = paginate(matching, Number(searchParams.get(PARAMS.page) ?? 1), pageSize);
     const activeFilterCount = countActiveFilters(filters);
     const back = location.pathname + location.search;
@@ -202,12 +207,12 @@ const Assignments = () => {
         return `/assignments/new?${params}`;
     };
 
-    // A readable summary of the active filters, e.g. "CS 3700 · Due Sep 1 – Sep 30 · Hiding completed"
+    // A readable summary of the active filters, e.g. "CS 3700 · Due Sep 1 – Sep 30 · Including completed"
     const filterSummary = [
         filters.classId && classesById.get(filters.classId)?.code,
         (filters.from || filters.to) &&
             `Due ${filters.from ? formatDate(filters.from) : "any time"} – ${filters.to ? formatDate(filters.to) : "any time"}`,
-        filters.hideDone && "Hiding completed"
+        filters.showDone && "Including completed"
     ]
         .filter(Boolean)
         .join(" · ");
@@ -331,7 +336,22 @@ const Assignments = () => {
                         </div>
                     )}
 
-                    {data && data.assignments.length > 0 && matching.length === 0 && (
+                    {data && matching.length === 0 && hiddenDone > 0 && (
+                        <div className="text-center text-gray-600 py-16 space-y-2">
+                            <p>
+                                Nothing left to do here:{" "}
+                                {hiddenDone === 1
+                                    ? "1 completed assignment is"
+                                    : `${hiddenDone} completed assignments are`}{" "}
+                                hidden.
+                            </p>
+                            <TertiaryButton onClick={() => updateParams({ [PARAMS.showDone]: "1" })}>
+                                Show completed
+                            </TertiaryButton>
+                        </div>
+                    )}
+
+                    {data && data.assignments.length > 0 && matching.length === 0 && hiddenDone === 0 && (
                         <div className="text-center text-gray-600 py-16 space-y-2">
                             <p>No assignments match{search ? ` "${search.trim()}"` : ""} with these filters.</p>
                             <TertiaryButton

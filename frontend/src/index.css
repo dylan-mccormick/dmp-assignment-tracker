@@ -2,11 +2,68 @@
 
 @theme {
     --color-primary: #074885;
+    /* the dimming behind modals and the loading overlay: stays dark in both schemes */
+    --color-overlay: rgb(0 0 0 / 0.5);
+    /* the unfilled part of the dashboard charts (a light step of the primary, like bg-primary/15) */
+    --color-chart-track: #dae4ed;
+}
+
+/*
+ * Dark mode, following the browser's preference. Components use the palette by role, so the scheme swaps the tokens,
+ * not the components: white is the surface, gray-50/100 subtle fills, 200/300 borders, 400-600 muted text, 700-900 and
+ * black the strongest ink. Each dark value is picked, not computed (checked for contrast against the dark surface), and
+ * the status tints (-50 backgrounds, -700/800 text) get dark backgrounds with light text. Light mode is untouched
+ */
+:root {
+    color-scheme: light dark; /* native controls: date pickers, selects, scrollbars */
+}
+
+@media (prefers-color-scheme: dark) {
+    :root {
+        --color-white: #0f1115;
+        --color-black: #f3f4f6;
+        --color-gray-50: #171a21;
+        --color-gray-100: #1f232c;
+        --color-gray-200: #2b303b;
+        --color-gray-300: #3b4250;
+        --color-gray-400: #7c8595;
+        --color-gray-500: #939cab;
+        --color-gray-600: #aab2bf;
+        --color-gray-700: #c5cbd5;
+        --color-gray-800: #dce0e6;
+        --color-gray-900: #eceef2;
+
+        --color-primary: #74abe6;
+        --color-chart-track: #1d2d3f;
+        --color-overlay: rgb(0 0 0 / 0.65);
+
+        --color-blue-50: #11253b;
+        --color-blue-200: #1f4a76;
+        --color-blue-600: #a3cbf3;
+
+        --color-red-50: #37161a;
+        --color-red-200: #6a2329;
+        --color-red-500: #f07a7a;
+        --color-red-600: #f39393;
+        --color-red-700: #f08a8a;
+        --color-red-800: #f6a8a8;
+        --color-red-900: #fbc9c9;
+
+        --color-amber-50: #33270c;
+        --color-amber-800: #f3c56f;
+
+        --color-green-50: #102b1c;
+        --color-green-200: #1e5235;
+        --color-green-600: #3fcf7a;
+        --color-green-700: #6ad99a;
+        --color-green-800: #8ce4b1;
+        --color-green-900: #bdf2d3;
+    }
 }
 
 @layer base {
     body {
-        @apply font-sans;
+        @apply font-sans bg-white text-black;
     }
 }
 

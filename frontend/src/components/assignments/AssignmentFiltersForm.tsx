@@ -84,11 +84,11 @@ const AssignmentFiltersForm = ({ classes, initialValues, onApply, onCancel }: As
             <label className="flex items-center gap-2 cursor-pointer">
                 <input
                     type="checkbox"
-                    checked={values.hideDone}
-                    onChange={e => setValues(v => ({ ...v, hideDone: e.target.checked }))}
+                    checked={values.showDone}
+                    onChange={e => setValues(v => ({ ...v, showDone: e.target.checked }))}
                     className="w-4 h-4 accent-primary cursor-pointer"
                 />
-                Hide completed
+                Show completed
             </label>
 
             <FormActions

@@ -1,5 +1,10 @@
 // ringColors.ts
-// The completion ring's colors: the app's primary, on a lighter step of the same hue (like ProgressBar's bg-primary/15)
+// The dashboard charts' colors, as CSS variables so they follow the light/dark scheme (see index.css)
 
-export const RING_FILL = "#074885";
-export const RING_TRACK = "#dae4ed";
+// the app's primary, on a lighter (in dark mode, darker) step of the same hue
+export const RING_FILL = "var(--color-primary)";
+export const RING_TRACK = "var(--color-chart-track)";
+// the 2px gap between segments is the card's surface
+export const CHART_SURFACE = "var(--color-white)";
+// axis and bar labels use the secondary text color
+export const CHART_LABEL = "var(--color-gray-600)";
