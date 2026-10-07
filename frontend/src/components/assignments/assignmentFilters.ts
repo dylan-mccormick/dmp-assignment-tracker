@@ -9,10 +9,11 @@ export interface AssignmentFilters {
     classId: string; // "" for every class
     from: string; // "YYYY-MM-DD" or ""; due on or after the start of this day
     to: string; // "YYYY-MM-DD" or ""; due on or before the end of this day
-    hideDone: boolean;
+    showDone: boolean; // completed assignments are hidden unless this is set
 }
 
-export const NO_FILTERS: AssignmentFilters = { classId: "", from: "", to: "", hideDone: false };
+// The default view: every class, any due date, and only what's still to do
+export const NO_FILTERS: AssignmentFilters = { classId: "", from: "", to: "", showDone: false };
 
 // URL query parameters, so the view survives a reload and the back link from an assignment
 export const PARAMS = {
@@ -20,7 +21,7 @@ export const PARAMS = {
     classId: "class",
     from: "from",
     to: "to",
-    hideDone: "hideDone",
+    showDone: "showDone",
     search: "q",
     page: "page",
     pageSize: "size"
@@ -43,7 +44,7 @@ export const readFilters = (params: URLSearchParams, classIds: Set<string>): Ass
         classId: classIds.has(classId) ? classId : "",
         from: DATE_PATTERN.test(from) ? from : "",
         to: DATE_PATTERN.test(to) ? to : "",
-        hideDone: params.get(PARAMS.hideDone) === "1"
+        showDone: params.get(PARAMS.showDone) === "1"
     };
 };
 
@@ -53,11 +54,11 @@ export const readFilters = (params: URLSearchParams, classIds: Set<string>): Ass
  * @param filters The filters
  * @returns The parameter patch
  */
-export const filtersToParams = ({ classId, from, to, hideDone }: AssignmentFilters) => ({
+export const filtersToParams = ({ classId, from, to, showDone }: AssignmentFilters) => ({
     [PARAMS.classId]: classId || undefined,
     [PARAMS.from]: from || undefined,
     [PARAMS.to]: to || undefined,
-    [PARAMS.hideDone]: hideDone ? "1" : undefined
+    [PARAMS.showDone]: showDone ? "1" : undefined
 });
 
 /**
@@ -72,13 +73,13 @@ export const readPageSize = (params: URLSearchParams) => {
 };
 
 /**
- * Counts the filters that narrow the list, for the filter button's badge
+ * Counts the filters changed from the default view (showing completed counts too), for the filter button's badge
  *
  * @param filters The filters
  * @returns How many are set
  */
-export const countActiveFilters = ({ classId, from, to, hideDone }: AssignmentFilters) =>
-    [classId, from, to, hideDone].filter(Boolean).length;
+export const countActiveFilters = ({ classId, from, to, showDone }: AssignmentFilters) =>
+    [classId, from, to, showDone].filter(Boolean).length;
 
 /**
  * Applies the filters and a case-insensitive name search, keeping the API's soonest-due-first order
@@ -90,7 +91,7 @@ export const countActiveFilters = ({ classId, from, to, hideDone }: AssignmentFi
  */
 export const applyFilters = (
     assignments: Assignment[],
-    { classId, from, to, hideDone }: AssignmentFilters,
+    { classId, from, to, showDone }: AssignmentFilters,
     search: string
 ) => {
     const query = search.trim().toLowerCase();
@@ -103,7 +104,7 @@ export const applyFilters = (
             (!classId || assignment.classId === classId) &&
             due >= fromMs &&
             due <= toMs &&
-            (!hideDone || !assignment.done) &&
+            (showDone || !assignment.done) &&
             (!query || assignment.name.toLowerCase().includes(query))
         );
     });
