@@ -17,7 +17,7 @@ Browser ──► frontend (React, nginx) ──► gateway (Express, REST /api/
 | `frontend` | 3000 (dev) | — | React 19 + Vite + Tailwind v4 SPA |
 | `gateway` | 8080 | — | REST API, JWT auth middleware, rate limiting |
 | `auth-service` | 50051 | Postgres + Redis | Google OAuth sign-in, JWT issuance and revocation |
-| `assignment-service` | 50052 | Postgres + Redis | Semesters, classes, assignments; publishes change events |
+| `assignment-service` | 50052 | Postgres (Redis planned) | Semesters, classes, assignments; publishes change events |
 | `stats-service` | 50053 | Redis only | Dashboard aggregates, a rebuildable read model |
 | `notification-service` | — | (planned) | In-app due-date reminders (in progress) |
 
@@ -25,7 +25,7 @@ Each piece uses a different communication pattern on purpose:
 
 - **gRPC** for synchronous request/response between the gateway and the services. The `.proto` files in [`proto/`](proto/) are the source of truth.
 - **RabbitMQ** for async fan-out. After each write, the assignment service publishes to the `assignment.events` topic exchange (`semester.*`, `class.*`, `assignment.*`), and stats and notification each subscribe on their own.
-- **Redis cache-aside** for the assignment service's read-heavy queries, and as the stats service's only storage, invalidated by a per-user version bump when an event arrives.
+- **Redis cache-aside** as the stats service's only storage, invalidated by a per-user version bump when an event arrives. The assignment service will cache its read-heavy queries the same way, but that isn't built yet.
 - **Redis for revocation**: JWTs carry a `tokenVersion` that's checked against the user's current version, so logging out invalidates every session.
 
 Sign-in is Google OAuth only (auth-code popup flow), so the app never stores passwords.
@@ -83,7 +83,7 @@ Pushing to `main` triggers the workflow for each package that changed. It builds
 
 ## Status
 
-Sign-in, account management, CRUD for semesters, classes, and assignments, and the dashboard are working. Still to come are notifications (WebSocket push, a feed, and due-soon reminders), a semester picker on the dashboard, and a 30-day grace period before deleted accounts are purged. See [`CLAUDE.md`](CLAUDE.md) for detailed design notes.
+Sign-in, account management, CRUD for semesters, classes, and assignments, and the dashboard are working. Still to come are notifications (WebSocket push, a feed, and due-soon reminders), a Redis cache for the assignment service, a semester picker on the dashboard, and a 30-day grace period before deleted accounts are purged. See [`CLAUDE.md`](CLAUDE.md) for detailed design notes.
 
 ## License
 
