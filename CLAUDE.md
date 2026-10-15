@@ -39,7 +39,7 @@ A local, untracked `.git/hooks/pre-commit` (zsh) runs `pnpm oxlint`/`oxfmt` on s
 Each of these is deliberately a different pattern:
 - **gRPC** (sync request/response): gateway ↔ services, insecure, inside `backend_net`. The gateway exposes REST at `/api/v1/*` on :8080.
 - **RabbitMQ** (async fan-out): after each committed write, Assignment Service publishes to the durable topic exchange `assignment.events` with routing keys `semester.*`, `class.*` and `assignment.*` (`created`, `updated` with `{ before, after }`, `deleted`). Every message is a persistent JSON envelope `{ id, type, userId, occurredAt, data }` (see `services/assignment/src/events/EventPublisher.ts`). There are no `assignment.completed` / `due_date_changed` keys: consumers derive those from `before`/`after`. Cascading deletes publish only the parent's event. Notification and Stats each subscribe independently, and the fan-out is why this isn't a direct service call.
-- **Redis cache-aside**, used twice with the same pattern: (1) Assignment Service read-heavy queries, (2) Stats Service's only storage.
+- **Redis cache-aside**: today this is Stats Service's only storage. Caching Assignment Service's read-heavy queries the same way is a planned requirement but isn't built yet (see Open work).
 - **Redis for fast revocation**: this backs `token_version` checks (see Auth). It is not caching for speed.
 
 Only the frontend is exposed to the host in prod (`15007`); the gateway is reachable only through the frontend's nginx at `/api/`, so a client can't skip the proxies that `TRUST_PROXY` counts. In compose, the frontend is on `frontend_net` only, and the gateway connects both networks.
@@ -49,7 +49,7 @@ Only the frontend is exposed to the host in prod (`15007`); the gateway is reach
 | Service | Port | Storage | Role |
 |---|---|---|---|
 | `auth-service` | 50051 | Postgres `postgres-auth` + Redis | Google OAuth, JWT issuance, owns `users` |
-| `assignment-service` | 50052 | Postgres `postgres-assignment` + Redis | Semesters/classes/assignments/types; publishes events |
+| `assignment-service` | 50052 | Postgres `postgres-assignment` (Redis planned) | Semesters/classes/assignments/types; publishes events |
 | `stats-service` | 50053 | Redis only | Dashboard aggregates |
 | `notification-service` | — | (planned table) | In-app due-date reminders |
 
@@ -144,6 +144,7 @@ The schemas live in `services/<name>/init.sql`.
 - Notification: the push mechanism, the notifications table, and the scheduled reminders.
 - **Due-soon reminders** (e.g. "due in 24h"). These fire on a schedule, not on a change, so events can't drive them: Notification needs a periodic job that scans every user's not-done assignments by `due`. That cross-user scan wants a partial index like `(due) WHERE done = false`, which the current `(user_id, due)` and `(class_id, due)` indexes don't serve.
 - **Account deletion: a 30-day grace period, then permanent deletion.** Signing in during the grace period restores the account (today that works with no time limit). After 30 days, a scheduled purge in auth-service hard-deletes the user and publishes `user.deleted` on RabbitMQ. Then the assignment service deletes their semesters (which cascade to classes and assignments), the stats service drops their cache, and the notification service deletes their notifications, with each consumer idempotent. Signing in after the purge creates a fresh account.
+- **Assignment Service Redis cache.** Cache-aside for its read-heavy queries (e.g. a user's assignment list) is a requirement, but the service has no Redis code or `redis` dependency yet. Compose already gives it `REDIS_URL` and `depends_on: redis` in anticipation. Reuse Stats' per-user version invalidation and per-call timeout rather than plain `DEL`.
 - `POST /assignment-types`, so the type list can grow.
 - A Postgres migration tool.
 - Frontend: sign-in, the account page, CRUD pages for semesters, classes and assignments, and the dashboard are built. Still to come: a semester picker on the dashboard (the API already takes `semesterId`) and the notification feed.
