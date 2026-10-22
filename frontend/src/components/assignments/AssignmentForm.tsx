@@ -2,12 +2,14 @@
 // Every editable field of an assignment, with hints for the optional deadlines and a large notes area, validated by
 // the same rules as the server
 
-import { type FormEvent, type ReactNode, useState } from "react";
+import { type FormEvent, type ReactNode, useId, useState } from "react";
+import { flushSync } from "react-dom";
 
 import type { AssignmentType } from "../../model/Assignment";
 import type { Class } from "../../model/Class";
 import type { Semester } from "../../model/Semester";
 import FormActions from "../form/FormActions";
+import { focusFirstInvalid } from "../form/formControl";
 import FormField from "../form/FormField";
 import Input from "../form/Input";
 import Select from "../form/Select";
@@ -74,6 +76,8 @@ const AssignmentForm = ({
     extraActions
 }: AssignmentFormProps) => {
     // State
+    // unique per form instance, so two open copies of a form (e.g. an edit pane and a "New" modal) don't share ids
+    const formId = useId();
     const [values, setValues] = useState(initialValues);
     const [attempted, setAttempted] = useState(false); // show field errors once the user tries to submit
     const [submitting, setSubmitting] = useState(false);
@@ -89,10 +93,15 @@ const AssignmentForm = ({
         setFormError(undefined);
     };
 
-    const handleSubmit = async (e: FormEvent) => {
+    const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
         e.preventDefault();
+        const form = e.currentTarget;
+        if (Object.keys(validate(values)).length > 0) {
+            flushSync(() => setAttempted(true));
+            focusFirstInvalid(form);
+            return;
+        }
         setAttempted(true);
-        if (Object.keys(validate(values)).length > 0) return;
 
         setSubmitting(true);
         try {
@@ -115,11 +124,12 @@ const AssignmentForm = ({
             onSubmit={handleSubmit}
             className="space-y-6">
             <FormField
-                id="assignment-name"
+                id={`${formId}-name`}
                 label="Name"
                 error={errors.name}>
                 <Input
-                    id="assignment-name"
+                    id={`${formId}-name`}
+                    required
                     type="text"
                     autoFocus={!initialValues.name}
                     maxLength={MAX_NAME_LENGTH}
@@ -132,11 +142,12 @@ const AssignmentForm = ({
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <FormField
-                    id="assignment-classId"
+                    id={`${formId}-classId`}
                     label="Class"
                     error={errors.classId}>
                     <Select
-                        id="assignment-classId"
+                        id={`${formId}-classId`}
+                        required
                         value={values.classId}
                         onChange={e => setValue("classId", e.target.value)}
                         invalid={!!errors.classId}>
@@ -157,11 +168,12 @@ const AssignmentForm = ({
                     </Select>
                 </FormField>
                 <FormField
-                    id="assignment-typeId"
+                    id={`${formId}-typeId`}
                     label="Type"
                     error={errors.typeId}>
                     <Select
-                        id="assignment-typeId"
+                        id={`${formId}-typeId`}
+                        required
                         value={values.typeId}
                         onChange={e => setValue("typeId", e.target.value)}
                         invalid={!!errors.typeId}>
@@ -181,12 +193,12 @@ const AssignmentForm = ({
                 <legend className="text-sm font-medium text-gray-700 mb-3">Deadlines</legend>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <FormField
-                        id="assignment-earlyDue"
+                        id={`${formId}-earlyDue`}
                         label="Early due (optional)"
                         hint="An earlier deadline, e.g. for early-submission credit. Must be on or before the due date."
                         error={errors.earlyDue}>
                         <Input
-                            id="assignment-earlyDue"
+                            id={`${formId}-earlyDue`}
                             type="datetime-local"
                             max={values.due || undefined}
                             value={values.earlyDue}
@@ -196,12 +208,13 @@ const AssignmentForm = ({
                         />
                     </FormField>
                     <FormField
-                        id="assignment-due"
+                        id={`${formId}-due`}
                         label="Due"
                         hint="The main deadline."
                         error={errors.due}>
                         <Input
-                            id="assignment-due"
+                            id={`${formId}-due`}
+                            required
                             type="datetime-local"
                             value={values.due}
                             onChange={e => setValue("due", e.target.value)}
@@ -210,12 +223,12 @@ const AssignmentForm = ({
                         />
                     </FormField>
                     <FormField
-                        id="assignment-lateDue"
+                        id={`${formId}-lateDue`}
                         label="Late due (optional)"
                         hint="The last time a late submission is accepted, often with a penalty. Must be on or after the due date."
                         error={errors.lateDue}>
                         <Input
-                            id="assignment-lateDue"
+                            id={`${formId}-lateDue`}
                             type="datetime-local"
                             min={values.due || undefined}
                             value={values.lateDue}
@@ -238,12 +251,12 @@ const AssignmentForm = ({
             </label>
 
             <FormField
-                id="assignment-notes"
+                id={`${formId}-notes`}
                 label="Notes"
                 hint={`${values.notes.length.toLocaleString()} / ${MAX_NOTES_LENGTH.toLocaleString()} characters`}
                 error={errors.notes}>
                 <TextArea
-                    id="assignment-notes"
+                    id={`${formId}-notes`}
                     rows={12}
                     placeholder="Instructions, links, what's left to do..."
                     value={values.notes}

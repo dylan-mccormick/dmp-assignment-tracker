@@ -1,10 +1,12 @@
 // ClassForm.tsx
 // Name/code (and optionally semester) form for creating or editing a class, with the same validation rules as the server
 
-import { type FormEvent, type ReactNode, useState } from "react";
+import { type FormEvent, type ReactNode, useId, useState } from "react";
+import { flushSync } from "react-dom";
 
 import type { Semester } from "../../model/Semester";
 import FormActions from "../form/FormActions";
+import { focusFirstInvalid } from "../form/formControl";
 import FormField from "../form/FormField";
 import Input from "../form/Input";
 import SemesterSelect from "./SemesterSelect";
@@ -56,6 +58,8 @@ const ClassForm = ({
     extraActions
 }: ClassFormProps) => {
     // State
+    // unique per form instance, so two open copies of a form (e.g. an edit pane and a "New" modal) don't share ids
+    const formId = useId();
     const [values, setValues] = useState(initialValues);
     const [attempted, setAttempted] = useState(false); // show field errors once the user tries to submit
     const [submitting, setSubmitting] = useState(false);
@@ -72,10 +76,15 @@ const ClassForm = ({
         setFormError(undefined);
     };
 
-    const handleSubmit = async (e: FormEvent) => {
+    const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
         e.preventDefault();
+        const form = e.currentTarget;
+        if (Object.keys(validate(values)).length > 0) {
+            flushSync(() => setAttempted(true));
+            focusFirstInvalid(form);
+            return;
+        }
         setAttempted(true);
-        if (Object.keys(validate(values)).length > 0) return;
 
         setSubmitting(true);
         try {
@@ -95,11 +104,12 @@ const ClassForm = ({
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div className="sm:col-span-2">
                     <FormField
-                        id="class-name"
+                        id={`${formId}-name`}
                         label="Name"
                         error={errors.name}>
                         <Input
-                            id="class-name"
+                            id={`${formId}-name`}
+                            required
                             type="text"
                             autoFocus={!initialValues.name}
                             maxLength={MAX_NAME_LENGTH}
@@ -111,11 +121,12 @@ const ClassForm = ({
                     </FormField>
                 </div>
                 <FormField
-                    id="class-code"
+                    id={`${formId}-code`}
                     label="Code"
                     error={errors.code}>
                     <Input
-                        id="class-code"
+                        id={`${formId}-code`}
+                        required
                         type="text"
                         maxLength={MAX_CODE_LENGTH}
                         placeholder="e.g. CS 3700"
@@ -128,10 +139,10 @@ const ClassForm = ({
 
             {semesters && (
                 <FormField
-                    id="class-semesterId"
+                    id={`${formId}-semesterId`}
                     label="Semester">
                     <SemesterSelect
-                        id="class-semesterId"
+                        id={`${formId}-semesterId`}
                         semesters={semesters}
                         value={values.semesterId}
                         onChange={semesterId => setValue("semesterId", semesterId)}

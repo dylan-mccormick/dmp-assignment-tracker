@@ -1,15 +1,24 @@
 // Modal.tsx
-// Renders the current ModalContext modal over the page, scaling in on open and out on close
+// Renders the current ModalContext modal over the page, scaling in on open and out on close. It's a native modal
+// <dialog>, so the page behind it is inert (focus stays inside) and Escape cancels it; focus returns to whatever opened
+// it
 
 import { LoaderCircle } from "lucide-react";
-import { type TransitionEvent, useContext, useState } from "react";
+import { type SyntheticEvent, type TransitionEvent, useContext, useLayoutEffect, useRef, useState } from "react";
 
 import { type ModalConfig, ModalContext } from "../context/ModalContext";
 import PrimaryButton from "./PrimaryButton";
 import SecondaryButton from "./SecondaryButton";
 
+// Where focus goes when the element that opened the modal is gone (e.g. the Delete button of a deleted item)
+const focusFallback = () => document.getElementById("main")?.focus();
+
 const Modal = () => {
     const { modal: current, closeModal } = useContext(ModalContext);
+
+    // Refs
+    const dialogRef = useRef<HTMLDialogElement>(null);
+    const returnFocusRef = useRef<HTMLElement | null>(null);
 
     // Keep showing the last modal after closeModal() so it can animate out; switching straight to another modal
     // (e.g. confirm -> "please wait") swaps the content in place
@@ -24,27 +33,78 @@ const Modal = () => {
     const modal = displayed;
 
     // With reduced motion there's no transition to wait for
-    if (!modal || (closing && window.matchMedia("(prefers-reduced-motion: reduce)").matches)) return null;
+    const shown = modal !== undefined && !(closing && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
 
-    const handleTransitionEnd = (e: TransitionEvent<HTMLDivElement>) => {
+    // Open the dialog before paint, and keep focus inside it when its content is swapped (the focused button may be
+    // gone). On close it leaves the top layer right away (the fade-out plays as a plain fixed layer), so the page stops
+    // being inert at once: focus goes back to whatever opened it, and a banner set alongside closeModal() is announced
+    useLayoutEffect(() => {
+        const dialog = dialogRef.current;
+        const open = shown && !closing;
+        if (open && dialog && !dialog.open) {
+            returnFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+            dialog.showModal(); // focuses the first focusable element, e.g. Cancel or a form's first field
+        } else if (open && dialog && !dialog.contains(document.activeElement)) {
+            dialog.focus();
+        }
+        if (!open) {
+            if (dialog?.open) dialog.close();
+            if (returnFocusRef.current) {
+                const target = returnFocusRef.current;
+                returnFocusRef.current = null;
+                if (target.isConnected) target.focus();
+                else focusFallback();
+            }
+        }
+    });
+
+    if (!modal || !shown) return null;
+
+    const handleTransitionEnd = (e: TransitionEvent<HTMLDialogElement>) => {
         if (closing && e.target === e.currentTarget && e.propertyName === "opacity") setDisplayed(undefined);
     };
 
+    // Escape: the dialog closes through closeModal (so it can animate out), never on its own. A "please wait" modal
+    // can't be cancelled
+    const handleCancel = (e: SyntheticEvent<HTMLDialogElement>) => {
+        e.preventDefault();
+        if (closing || modal.type === "buttonless") return;
+        closeModal();
+        if (modal.type === "confirm") modal.onCancel?.();
+    };
+
+    // Browsers only let a page refuse Escape once per user interaction, so a repeated Escape can still close the dialog
+    // natively; a "please wait" modal is reopened, since its request is still running
+    const handleClose = (e: SyntheticEvent<HTMLDialogElement>) => {
+        if (!closing && modal.type === "buttonless") e.currentTarget.showModal();
+    };
+
     return (
-        <div
+        <dialog
+            ref={dialogRef}
+            tabIndex={-1}
+            aria-labelledby="modal-title"
+            aria-describedby={modal.message ? "modal-message" : undefined}
+            aria-busy={modal.loadingSpinner || undefined}
+            aria-hidden={closing || undefined}
+            onCancel={handleCancel}
+            onClose={handleClose}
             onTransitionEnd={handleTransitionEnd}
-            className={`fixed inset-0 bg-overlay z-50 flex items-center justify-center transition-opacity duration-150 ease-out starting:opacity-0 motion-reduce:transition-none ${closing ? "opacity-0 pointer-events-none" : "opacity-100"}`}>
+            className={`fixed inset-0 m-0 p-0 border-0 w-full h-full max-w-none max-h-none bg-overlay text-black outline-none backdrop:bg-transparent items-center justify-center transition-opacity duration-150 ease-out starting:opacity-0 motion-reduce:transition-none ${closing ? "flex z-50 opacity-0 pointer-events-none" : "open:flex opacity-100"}`}>
             <div
-                role="dialog"
-                aria-modal="true"
-                aria-labelledby="modal-title"
                 className={`bg-white rounded-lg p-6 max-w-sm w-full mx-4 shadow-xl transition-transform duration-150 ease-out starting:scale-90 motion-reduce:transition-none ${closing ? "scale-90" : "scale-100"}`}>
                 <h2
                     id="modal-title"
                     className="text-lg font-bold mb-2">
                     {modal.title}
                 </h2>
-                {modal.message && <p className="text-gray-600 mb-4">{modal.message}</p>}
+                {modal.message && (
+                    <p
+                        id="modal-message"
+                        className="text-gray-600 mb-4">
+                        {modal.message}
+                    </p>
+                )}
 
                 {modal.loadingSpinner && (
                     <div className="flex items-center justify-center py-2">
@@ -76,7 +136,7 @@ const Modal = () => {
                     </div>
                 )}
             </div>
-        </div>
+        </dialog>
     );
 };
 

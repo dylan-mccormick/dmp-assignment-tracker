@@ -15,7 +15,9 @@ const TypesChart = ({ types }: TypesChartProps) => {
 
     return (
         <ResponsiveContainer>
+            {/* hidden from screen readers (TypesCard has a table twin), so not focusable either */}
             <BarChart
+                accessibilityLayer={false}
                 data={rows}
                 layout="vertical"
                 margin={{ top: 0, right: 40, bottom: 0, left: 0 }}

@@ -1,7 +1,7 @@
 // AssignmentFiltersForm.tsx
 // The assignment table's filters (class, due date range, hide completed), shown in a custom modal
 
-import { type FormEvent, useState } from "react";
+import { type FormEvent, useId, useState } from "react";
 
 import type { Class } from "../../model/Class";
 import FormActions from "../form/FormActions";
@@ -20,6 +20,8 @@ interface AssignmentFiltersFormProps {
 
 const AssignmentFiltersForm = ({ classes, initialValues, onApply, onCancel }: AssignmentFiltersFormProps) => {
     // State
+    // unique per form instance, so two open copies of a form (e.g. an edit pane and a "New" modal) don't share ids
+    const formId = useId();
     const [values, setValues] = useState(initialValues);
 
     const rangeError =
@@ -36,10 +38,10 @@ const AssignmentFiltersForm = ({ classes, initialValues, onApply, onCancel }: As
             onSubmit={handleSubmit}
             className="space-y-4">
             <FormField
-                id="filter-class"
+                id={`${formId}-class`}
                 label="Class">
                 <Select
-                    id="filter-class"
+                    id={`${formId}-class`}
                     autoFocus
                     value={values.classId}
                     onChange={e => setValues(v => ({ ...v, classId: e.target.value }))}>
@@ -57,21 +59,21 @@ const AssignmentFiltersForm = ({ classes, initialValues, onApply, onCancel }: As
             <fieldset className="space-y-4">
                 <legend className="text-sm text-gray-600 mb-2">Due between</legend>
                 <FormField
-                    id="filter-from"
+                    id={`${formId}-from`}
                     label="From">
                     <Input
-                        id="filter-from"
+                        id={`${formId}-from`}
                         type="date"
                         value={values.from}
                         onChange={e => setValues(v => ({ ...v, from: e.target.value }))}
                     />
                 </FormField>
                 <FormField
-                    id="filter-to"
+                    id={`${formId}-to`}
                     label="To"
                     error={rangeError}>
                     <Input
-                        id="filter-to"
+                        id={`${formId}-to`}
                         type="date"
                         min={values.from || undefined}
                         value={values.to}

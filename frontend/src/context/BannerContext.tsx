@@ -8,7 +8,8 @@ export interface BannerConfig {
     level: "success" | "error" | "info";
     /**
      * How long the banner stays up, in milliseconds. Defaults to a duration based on the message length (see
-     * defaultBannerDuration); pass null to keep it up until the user dismisses it.
+     * defaultBannerDuration), except errors, which by default stay up until dismissed so they can't vanish before
+     * they're read; pass null to keep any banner up until the user dismisses it.
      */
     durationMs?: number | null;
 }
