@@ -18,7 +18,8 @@ const CompletionRing = ({ done, toDo }: CompletionRingProps) => {
 
     return (
         <ResponsiveContainer>
-            <PieChart>
+            {/* decorative (CompletionCard says the numbers in text), so not Recharts' keyboard/screen reader layer */}
+            <PieChart accessibilityLayer={false}>
                 <Pie
                     data={slices}
                     dataKey="value"

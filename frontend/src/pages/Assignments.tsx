@@ -3,7 +3,8 @@
 // in a modal, and pagination. All of it is client-side over the semester's assignments and kept in the URL
 
 import { ListFilter, Plus, Search, X } from "lucide-react";
-import { useContext, useEffect, useState } from "react";
+import { type Ref, useContext, useEffect, useRef, useState } from "react";
+import { flushSync } from "react-dom";
 import { Link, useLocation, useNavigate, useSearchParams } from "react-router";
 
 import {
@@ -37,22 +38,29 @@ import { paginate } from "../pagination";
 
 const IconButton = ({
     label,
-    pressed,
+    active,
+    opensDialog,
     onClick,
+    ref,
     children
 }: {
     label: string;
-    pressed?: boolean;
+    /** Highlights the button, e.g. while filters are applied */
+    active?: boolean;
+    /** Set when the button opens a modal */
+    opensDialog?: boolean;
     onClick: () => void;
+    ref?: Ref<HTMLButtonElement>;
     children: React.ReactNode;
 }) => (
     <button
+        ref={ref}
         type="button"
         aria-label={label}
-        aria-pressed={pressed}
+        aria-haspopup={opensDialog ? "dialog" : undefined}
         title={label}
         onClick={onClick}
-        className={`relative p-2 rounded cursor-pointer transition-colors hover:bg-gray-100 ${pressed ? "bg-gray-100 text-primary" : "text-gray-700"}`}>
+        className={`relative p-2 rounded cursor-pointer transition-colors hover:bg-gray-100 ${active ? "bg-gray-100 text-primary" : "text-gray-700"}`}>
         {children}
     </button>
 );
@@ -73,6 +81,9 @@ const Assignments = () => {
     // Tagged with the semester they were loaded for, so switching semesters shows "loading" instead of stale rows
     const [loaded, setLoaded] = useState<{ semesterId: string; classes: Class[]; assignments: Assignment[] }>();
     const [searchOpen, setSearchOpen] = useState(() => !!searchParams.get(PARAMS.search));
+
+    // Refs
+    const searchButtonRef = useRef<HTMLButtonElement>(null);
 
     // The picked semester: the URL's if it's still one of the user's, else the current one, else the newest
     const currentDate = todayDate();
@@ -195,9 +206,11 @@ const Assignments = () => {
             )
         });
 
+    // The search box (and its close button) unmount, so focus goes back to the Search button that opened it
     const closeSearch = () => {
-        setSearchOpen(false);
+        flushSync(() => setSearchOpen(false));
         updateParams({ [PARAMS.search]: undefined });
+        searchButtonRef.current?.focus();
     };
 
     const newAssignmentUrl = () => {
@@ -286,6 +299,7 @@ const Assignments = () => {
                             )}
                             {!searchOpen && (
                                 <IconButton
+                                    ref={searchButtonRef}
                                     label="Search by name"
                                     onClick={() => setSearchOpen(true)}>
                                     <Search className="w-5 h-5" />
@@ -293,7 +307,8 @@ const Assignments = () => {
                             )}
                             <IconButton
                                 label={activeFilterCount ? `Filters (${activeFilterCount} active)` : "Filters"}
-                                pressed={activeFilterCount > 0}
+                                active={activeFilterCount > 0}
+                                opensDialog
                                 onClick={openFilters}>
                                 <ListFilter className="w-5 h-5" />
                                 {activeFilterCount > 0 && (

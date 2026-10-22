@@ -112,7 +112,7 @@ const SemesterDetail = ({ semester, onSaved, onDeleted }: SemesterDetailProps) =
             </Link>
 
             <section>
-                <h2 className="text-lg font-light mb-4">Edit</h2>
+                <h3 className="text-lg font-light mb-4">Edit</h3>
                 <SemesterForm
                     initialValues={{ name: semester.name, startDate: semester.startDate, endDate: semester.endDate }}
                     submitLabel="Save"

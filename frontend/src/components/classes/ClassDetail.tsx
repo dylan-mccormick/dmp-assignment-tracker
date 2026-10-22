@@ -107,7 +107,7 @@ const ClassDetail = ({ cls, semesters, onSaved, onDeleted }: ClassDetailProps) =
             />
 
             <section>
-                <h2 className="text-lg font-light mb-4">Edit</h2>
+                <h3 className="text-lg font-light mb-4">Edit</h3>
                 <ClassForm
                     initialValues={{ semesterId: cls.semesterId, name: cls.name, code: cls.code }}
                     semesters={semesters}

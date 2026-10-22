@@ -8,6 +8,7 @@ import Banner from "./components/Banner";
 import LoadingBanner from "./components/LoadingBanner";
 import Modal from "./components/Modal";
 import ProtectedRoute from "./components/ProtectedRoute";
+import RouteFocus from "./components/RouteFocus";
 import ComposeProviders from "./ComposeProviders";
 import BannerContextProvider from "./context/BannerContextProvider";
 import LoadingBannerContextProvider from "./context/LoadingBannerContextProvider";
@@ -39,6 +40,7 @@ const App = () => {
             <Banner />
             <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID}>
                 <BrowserRouter>
+                    <RouteFocus />
                     <Routes>
                         <Route
                             path="/login"

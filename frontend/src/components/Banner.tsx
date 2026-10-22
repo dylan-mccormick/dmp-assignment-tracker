@@ -1,6 +1,7 @@
 // Banner.tsx
 // Renders the current BannerContext banner: slides in, auto-dismisses after its duration (paused while hovered or
-// focused), and can be closed with the X button
+// focused; errors stay until closed), and can be closed with the X button. Screen readers hear it through live regions
+// that are always mounted, since a live region that appears together with its text often isn't announced
 
 import { CircleAlert, CircleCheck, Info, X } from "lucide-react";
 import { type AnimationEvent, type TransitionEvent, useContext, useState } from "react";
@@ -27,7 +28,12 @@ const BannerItem = ({ banner, onDismissed }: { banner: ActiveBanner; onDismissed
 
     const styles = LEVEL_STYLES[banner.level];
     const Icon = LEVEL_ICONS[banner.level];
-    const durationMs = banner.durationMs === undefined ? defaultBannerDuration(banner.message) : banner.durationMs;
+    const durationMs =
+        banner.durationMs !== undefined
+            ? banner.durationMs
+            : banner.level === "error"
+              ? null
+              : defaultBannerDuration(banner.message);
 
     // Start the exit transition (no transition runs with reduced motion, so dismiss right away)
     const dismiss = () => (prefersReducedMotion() ? onDismissed() : setLeaving(true));
@@ -43,13 +49,13 @@ const BannerItem = ({ banner, onDismissed }: { banner: ActiveBanner; onDismissed
 
     return (
         <div
-            role={banner.level === "error" ? "alert" : "status"}
             onTransitionEnd={handleTransitionEnd}
             className={`group relative overflow-hidden flex items-start gap-3 p-4 rounded-lg border shadow-md transition-all duration-300 ease-out starting:opacity-0 starting:-translate-y-3 motion-reduce:transition-none ${styles.box} ${leaving ? "opacity-0 -translate-y-3" : "opacity-100 translate-y-0"}`}>
             <Icon className={`shrink-0 w-5 h-5 mt-0.5 ${styles.icon}`} />
             <span className="flex-1 min-w-0 break-words">{banner.message}</span>
             <button
-                className="shrink-0 cursor-pointer rounded opacity-60 hover:opacity-100 transition-opacity"
+                type="button"
+                className="shrink-0 -m-0.5 p-0.5 cursor-pointer rounded opacity-60 hover:opacity-100 transition-opacity"
                 aria-label="Dismiss"
                 onClick={dismiss}>
                 <X className="w-5 h-5" />
@@ -70,18 +76,32 @@ const BannerItem = ({ banner, onDismissed }: { banner: ActiveBanner; onDismissed
 const Banner = () => {
     const { banner, setBanner } = useContext(BannerContext);
 
-    if (!banner) return null;
-
     return (
-        <div className="fixed top-20 inset-x-0 z-40 flex justify-center px-4 pointer-events-none">
-            <div className="w-full max-w-xl pointer-events-auto">
-                <BannerItem
-                    key={banner.id}
-                    banner={banner}
-                    onDismissed={() => setBanner(undefined)}
-                />
+        <>
+            {/* the announcements: keyed by banner id, so the same message set twice is still read out again */}
+            <div
+                role="status"
+                className="sr-only">
+                {banner && banner.level !== "error" && <p key={banner.id}>{banner.message}</p>}
             </div>
-        </div>
+            <div
+                role="alert"
+                className="sr-only">
+                {banner?.level === "error" && <p key={banner.id}>{banner.message}</p>}
+            </div>
+
+            {banner && (
+                <div className="fixed top-20 inset-x-0 z-40 flex justify-center px-4 pointer-events-none">
+                    <div className="w-full max-w-xl pointer-events-auto">
+                        <BannerItem
+                            key={banner.id}
+                            banner={banner}
+                            onDismissed={() => setBanner(undefined)}
+                        />
+                    </div>
+                </div>
+            )}
+        </>
     );
 };
 

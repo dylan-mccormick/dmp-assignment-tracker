@@ -29,7 +29,10 @@ const CompletionCard = ({ done, total }: CompletionCardProps) => {
                 <p className="h-full flex items-center justify-center text-sm text-gray-500">No assignments yet.</p>
             ) : (
                 <div className="h-full flex flex-col">
-                    <div className="relative flex-1 min-h-0">
+                    {/* decorative for screen readers: the list and the sentence below say the same */}
+                    <div
+                        aria-hidden="true"
+                        className="relative flex-1 min-h-0">
                         {/* Recharts loads on demand; until then a plain ring of the same size holds the space */}
                         <Suspense
                             fallback={
@@ -42,10 +45,8 @@ const CompletionCard = ({ done, total }: CompletionCardProps) => {
                                 toDo={toDo}
                             />
                         </Suspense>
-                        {/* the headline number, centered in the ring; decorative for screen readers (the list below says it) */}
-                        <div
-                            aria-hidden="true"
-                            className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                        {/* the headline number, centered in the ring */}
+                        <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
                             <span className="text-5xl font-semibold">{percent}%</span>
                             <span className="text-sm text-gray-500">done</span>
                         </div>

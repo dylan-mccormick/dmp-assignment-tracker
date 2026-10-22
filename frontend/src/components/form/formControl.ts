@@ -28,10 +28,20 @@ export const describedBy = (id: string, { hint = false, invalid = false }: { hin
     [hint && fieldHintId(id), invalid && fieldErrorId(id)].filter(Boolean).join(" ") || undefined;
 
 /**
- * The border and focus ring for a form control
+ * The border and focus ring for a form control. Both stay at full strength (at least 3:1 against the surface, WCAG
+ * 1.4.11), so the control's edge and its focus are visible to low-vision users
  *
  * @param invalid Whether the control has a validation error
  * @returns The Tailwind classes
  */
 export const controlClass = (invalid = false) =>
-    `px-3 py-2 border rounded transition-colors focus:outline-none focus:ring-2 ${invalid ? "border-red-500 focus:ring-red-200" : "border-gray-300 focus:ring-primary/30"}`;
+    `px-3 py-2 border rounded transition-colors focus:outline-none focus:ring-2 ${invalid ? "border-red-500 focus:ring-red-500" : "border-gray-500 focus:ring-primary"}`;
+
+/**
+ * Focuses a form's first invalid control, after a submit that failed validation: its label and error are then read out,
+ * instead of the submit button staying focused with nothing announced. Render the errors first (flushSync)
+ *
+ * @param form The form element
+ */
+export const focusFirstInvalid = (form: HTMLFormElement) =>
+    form.querySelector<HTMLElement>('[aria-invalid="true"]')?.focus();

@@ -1,9 +1,10 @@
 // SplitPane.tsx
 // A list that splits into list + detail when an item is entered, with the detail pane expandable to full width.
-// Reusable: pass SplitPaneItems as children and render the detail for the selected item's key.
+// Reusable: pass SplitPaneItems as children and render the detail for the selected item's key. Entering an item moves
+// focus to the detail's heading, and closing the detail returns it to the item's row
 
 import { ChevronRight, Maximize2, Minimize2, X } from "lucide-react";
-import { createContext, type ReactNode, useCallback, useContext, useState } from "react";
+import { createContext, type ReactNode, useCallback, useContext, useEffect, useRef, useState } from "react";
 
 interface SplitPaneContextInterface {
     selectedKey: string | undefined;
@@ -60,6 +61,22 @@ const SplitPane = ({ children, selectedKey, onSelect, renderDetail, renderDetail
         if (selectedKey === undefined) setExpanded(false);
     }
 
+    // Refs
+    const listRef = useRef<HTMLUListElement>(null);
+    const headingRef = useRef<HTMLHeadingElement>(null);
+    const focusedKey = useRef(selectedKey);
+
+    // Move focus with the pane: the row that was activated may be hidden (small screens, expanded view) and the Close
+    // button unmounts, so without this focus would fall to <body>
+    useEffect(() => {
+        const previous = focusedKey.current;
+        focusedKey.current = selectedKey;
+        if (selectedKey === previous) return;
+        if (selectedKey !== undefined) headingRef.current?.focus();
+        else if (previous !== undefined)
+            listRef.current?.querySelector<HTMLElement>(`[data-split-key="${CSS.escape(previous)}"]`)?.focus();
+    }, [selectedKey]);
+
     const enter = useCallback((itemKey: string) => onSelect(itemKey), [onSelect]);
     const close = () => onSelect(undefined);
 
@@ -74,15 +91,25 @@ const SplitPane = ({ children, selectedKey, onSelect, renderDetail, renderDetail
         <SplitPaneContext.Provider value={{ selectedKey, enter }}>
             <div className="flex w-full">
                 <div className={`min-w-0 ${listWidth}`}>
-                    <ul className="divide-y divide-gray-200 border-y border-gray-200">{children}</ul>
+                    <ul
+                        ref={listRef}
+                        className="divide-y divide-gray-200 border-y border-gray-200">
+                        {children}
+                    </ul>
                 </div>
 
                 {open && (
                     <section
-                        aria-label="Details"
+                        aria-labelledby="split-pane-detail-title"
                         className={`min-w-0 w-full border-gray-200 transition-[opacity,translate] duration-200 ease-out starting:opacity-0 starting:translate-x-4 motion-reduce:transition-none ${full ? "" : "md:w-1/2 md:border-l"}`}>
                         <div className="flex items-center justify-between gap-2 px-4 py-3 border-y border-gray-200">
-                            <div className="min-w-0 truncate font-medium">{renderDetailTitle?.(selectedKey)}</div>
+                            <h2
+                                id="split-pane-detail-title"
+                                ref={headingRef}
+                                tabIndex={-1}
+                                className="min-w-0 truncate font-medium outline-none">
+                                {renderDetailTitle?.(selectedKey) ?? "Details"}
+                            </h2>
                             <div className="flex items-center gap-1 shrink-0">
                                 <PaneButton
                                     label={full ? "Back to split view" : "Expand"}
@@ -120,6 +147,7 @@ export const SplitPaneItem = ({ itemKey, children }: SplitPaneItemProps) => {
         <li>
             <button
                 type="button"
+                data-split-key={itemKey}
                 aria-current={selected || undefined}
                 onClick={() => enter(itemKey)}
                 className={`group w-full flex items-center gap-2 px-4 py-3 text-left cursor-pointer transition-colors duration-150 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-primary ${selected ? "bg-gray-100" : "hover:bg-gray-50"}`}>

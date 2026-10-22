@@ -3,7 +3,8 @@
 // or incomplete, and links to edit or delete it
 
 import { ArrowLeft, CircleCheck, Pencil, RotateCcw, Trash2 } from "lucide-react";
-import { useContext, useState } from "react";
+import { useContext, useRef, useState } from "react";
+import { flushSync } from "react-dom";
 import { Link, useLocation, useNavigate, useParams } from "react-router";
 
 import apiFetch, { readError } from "../apiClient";
@@ -43,7 +44,7 @@ const Deadline = ({ timestamp, now }: { timestamp: string | null; now: number })
             <span className="block text-sm text-gray-500">{formatRelative(timestamp, now)}</span>
         </>
     ) : (
-        <span className="text-gray-400">None</span>
+        <span className="text-gray-500">None</span>
     );
 
 const IconLabel = ({ icon, children }: { icon: React.ReactNode; children: React.ReactNode }) => (
@@ -63,7 +64,13 @@ const AssignmentView = () => {
     const navigate = useNavigate();
     const { data, loadError, setAssignment } = useAssignmentData(id);
     const [toggling, setToggling] = useState(false);
+    // read out by a live region once a toggle lands (the button's new label alone isn't announced)
+    const [toggleAnnouncement, setToggleAnnouncement] = useState("");
     const now = useNow();
+
+    // Refs
+    // wraps the toggle, which is a different button component when done vs not done (so it remounts on each toggle)
+    const toggleRef = useRef<HTMLDivElement>(null);
 
     const assignment = data?.assignment;
     const cls = data?.classes.find(c => c.id === assignment?.classId);
@@ -91,12 +98,15 @@ const AssignmentView = () => {
 
             const saved: Assignment = (await res.json()).assignment;
             setAssignment(saved);
+            setToggleAnnouncement(saved.done ? "Marked complete." : "Marked incomplete.");
             if (saved.done) fireConfetti();
         } catch (error) {
             console.error(error);
             setBanner({ level: "error", message: "Could not reach the server. Please try again." });
         } finally {
-            setToggling(false);
+            // render the re-enabled (and possibly swapped) button now, so focus can go back to it
+            flushSync(() => setToggling(false));
+            toggleRef.current?.querySelector("button")?.focus();
         }
     };
 
@@ -146,23 +156,27 @@ const AssignmentView = () => {
                         </div>
 
                         <div className="flex flex-wrap items-center gap-2">
-                            {assignment.done ? (
-                                <SecondaryButton
-                                    onClick={() => toggleDone(assignment)}
-                                    disabled={toggling}>
-                                    <IconLabel icon={<RotateCcw className="w-4 h-4" />}>
-                                        {toggling ? "Saving..." : "Mark incomplete"}
-                                    </IconLabel>
-                                </SecondaryButton>
-                            ) : (
-                                <PrimaryButton
-                                    onClick={() => toggleDone(assignment)}
-                                    disabled={toggling}>
-                                    <IconLabel icon={<CircleCheck className="w-4 h-4" />}>
-                                        {toggling ? "Saving..." : "Mark complete"}
-                                    </IconLabel>
-                                </PrimaryButton>
-                            )}
+                            <div
+                                ref={toggleRef}
+                                className="contents">
+                                {assignment.done ? (
+                                    <SecondaryButton
+                                        onClick={() => toggleDone(assignment)}
+                                        disabled={toggling}>
+                                        <IconLabel icon={<RotateCcw className="w-4 h-4" />}>
+                                            {toggling ? "Saving..." : "Mark incomplete"}
+                                        </IconLabel>
+                                    </SecondaryButton>
+                                ) : (
+                                    <PrimaryButton
+                                        onClick={() => toggleDone(assignment)}
+                                        disabled={toggling}>
+                                        <IconLabel icon={<CircleCheck className="w-4 h-4" />}>
+                                            {toggling ? "Saving..." : "Mark complete"}
+                                        </IconLabel>
+                                    </PrimaryButton>
+                                )}
+                            </div>
                             <SecondaryButton
                                 onClick={() =>
                                     navigate(`/assignments/${assignment.id}/edit`, {
@@ -229,6 +243,12 @@ const AssignmentView = () => {
                                 </p>
                             )}
                         </section>
+
+                        <p
+                            role="status"
+                            className="sr-only">
+                            {toggleAnnouncement}
+                        </p>
 
                         <p className="text-xs text-gray-500">
                             Created {formatDateTime(assignment.createdAt)} · Last updated{" "}

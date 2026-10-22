@@ -1,9 +1,11 @@
 // SemesterForm.tsx
 // Name/start/end form for creating or editing a semester, with the same validation rules as the server
 
-import { type FormEvent, type ReactNode, useState } from "react";
+import { type FormEvent, type ReactNode, useId, useState } from "react";
+import { flushSync } from "react-dom";
 
 import FormActions from "../form/FormActions";
+import { focusFirstInvalid } from "../form/formControl";
 import FormField from "../form/FormField";
 import Input from "../form/Input";
 
@@ -51,6 +53,8 @@ const SemesterForm = ({
     extraActions
 }: SemesterFormProps) => {
     // State
+    // unique per form instance, so two open copies of a form (e.g. an edit pane and a "New" modal) don't share ids
+    const formId = useId();
     const [values, setValues] = useState(initialValues);
     const [attempted, setAttempted] = useState(false); // show field errors once the user tries to submit
     const [submitting, setSubmitting] = useState(false);
@@ -67,10 +71,15 @@ const SemesterForm = ({
         setFormError(undefined);
     };
 
-    const handleSubmit = async (e: FormEvent) => {
+    const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
         e.preventDefault();
+        const form = e.currentTarget;
+        if (Object.keys(validate(values)).length > 0) {
+            flushSync(() => setAttempted(true));
+            focusFirstInvalid(form);
+            return;
+        }
         setAttempted(true);
-        if (Object.keys(validate(values)).length > 0) return;
 
         setSubmitting(true);
         try {
@@ -88,11 +97,12 @@ const SemesterForm = ({
             onSubmit={handleSubmit}
             className="space-y-4">
             <FormField
-                id="semester-name"
+                id={`${formId}-name`}
                 label="Name"
                 error={errors.name}>
                 <Input
-                    id="semester-name"
+                    id={`${formId}-name`}
+                    required
                     type="text"
                     autoFocus={!initialValues.name}
                     maxLength={MAX_NAME_LENGTH}
@@ -105,11 +115,12 @@ const SemesterForm = ({
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <FormField
-                    id="semester-startDate"
+                    id={`${formId}-startDate`}
                     label="Start date"
                     error={errors.startDate}>
                     <Input
-                        id="semester-startDate"
+                        id={`${formId}-startDate`}
+                        required
                         type="date"
                         value={values.startDate}
                         onChange={setField("startDate")}
@@ -117,11 +128,12 @@ const SemesterForm = ({
                     />
                 </FormField>
                 <FormField
-                    id="semester-endDate"
+                    id={`${formId}-endDate`}
                     label="End date"
                     error={errors.endDate}>
                     <Input
-                        id="semester-endDate"
+                        id={`${formId}-endDate`}
+                        required
                         type="date"
                         min={values.startDate || undefined}
                         value={values.endDate}

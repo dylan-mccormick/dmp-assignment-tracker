@@ -52,7 +52,12 @@ const DashboardCard = ({ w = 1, h = 1, title, label, action, children }: Dashboa
                     {action}
                 </div>
             )}
-            <div className="flex-1 min-h-0">{children}</div>
+            {/* scrolls rather than clips when the text outgrows the fixed row height (zoomed text, custom text spacing). It
+                reaches into the card's padding (negative margins, same padding back) so rows that bleed into it (-mx-2)
+                and focus outlines aren't cut off by the scroll box */}
+            <div className="flex-1 min-h-0 -mx-4 px-4 -mt-1 pt-1 -mb-4 pb-4 overflow-x-hidden overflow-y-auto">
+                {children}
+            </div>
         </section>
     );
 };
