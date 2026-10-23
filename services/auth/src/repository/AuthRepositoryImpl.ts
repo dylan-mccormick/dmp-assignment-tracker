@@ -110,25 +110,69 @@ export class AuthRepositoryImpl implements AuthRepository {
         return tokenVersion;
     }
 
-    async upsertUserByGoogleId(
+    async updateUserByGoogleId(
         googleId: string,
         props: GoogleProfileProps
+    ): Promise<{ user: User; restored: boolean } | undefined> {
+        try {
+            // `previous` is read before the update, since RETURNING only sees the new values
+            const result = await this.pool.query(
+                `UPDATE users SET
+                    email = $2,
+                    name = $3,
+                    avatar_url = $4,
+                    deleted_at = NULL,
+                    updated_at = NOW()
+                FROM (SELECT id, deleted_at FROM users WHERE google_id = $1) AS previous
+                WHERE users.id = previous.id
+                RETURNING users.*, previous.deleted_at IS NOT NULL AS restored`,
+                [googleId, props.email, props.name, props.avatarUrl ?? null]
+            );
+
+            if (!result.rows[0]) return undefined;
+            return { user: rowToUser(result.rows[0]), restored: result.rows[0].restored };
+        } catch (error) {
+            if (isUniqueViolation(error))
+                throw new MicroserviceError(
+                    status.ALREADY_EXISTS,
+                    "Another account already uses this email address.",
+                    "Update by google ID conflicted with an existing user's email.",
+                    error
+                );
+
+            throw new MicroserviceError(
+                status.INTERNAL,
+                "Unknown internal error.",
+                "Failed to update user by google ID due to database error.",
+                error
+            );
+        }
+    }
+
+    async upsertUserByGoogleId(
+        googleId: string,
+        props: GoogleProfileProps,
+        termsVersion: string
     ): Promise<{ user: User; created: boolean; restored: boolean }> {
         const newId = uuidv7();
 
         try {
-            // `previous` reads the row as it was before this statement, since RETURNING only sees the new values
+            // `previous` reads the row as it was before this statement, since RETURNING only sees the new values. An
+            // existing user keeps the terms version they first accepted
             const result = await this.pool.query(
                 `WITH previous AS (SELECT deleted_at FROM users WHERE google_id = $2)
-                INSERT INTO users (id, google_id, email, name, avatar_url) VALUES ($1, $2, $3, $4, $5)
+                INSERT INTO users (id, google_id, email, name, avatar_url, terms_version, terms_accepted_at)
+                VALUES ($1, $2, $3, $4, $5, $6, NOW())
                 ON CONFLICT (google_id) DO UPDATE SET
                     email = EXCLUDED.email,
                     name = EXCLUDED.name,
                     avatar_url = EXCLUDED.avatar_url,
+                    terms_version = COALESCE(users.terms_version, EXCLUDED.terms_version),
+                    terms_accepted_at = COALESCE(users.terms_accepted_at, EXCLUDED.terms_accepted_at),
                     deleted_at = NULL,
                     updated_at = NOW()
                 RETURNING *, COALESCE((SELECT deleted_at IS NOT NULL FROM previous), FALSE) AS restored`,
-                [newId, googleId, props.email, props.name, props.avatarUrl ?? null]
+                [newId, googleId, props.email, props.name, props.avatarUrl ?? null, termsVersion]
             );
 
             const user = rowToUser(result.rows[0]);

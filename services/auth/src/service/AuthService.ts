@@ -3,15 +3,39 @@
 
 import { User } from "../generated/authentication";
 
+// A signed-in session for the user
+export interface Session {
+    user: User;
+    jwt: string;
+    created: boolean; // this is a new user
+    restored: boolean; // a soft-deleted account was restored
+}
+
+// Signing in either starts a session, or, for a Google account with no user yet, requires the terms to be accepted first
+export type SignInResult = ({ termsRequired: false } & Session) | { termsRequired: true; signupToken: string };
+
 export interface AuthService {
     /**
-     * Either creates or returns a user who tries to log in via OAuth2 and provides their Google auth code
+     * Signs in an existing user via the Google auth code from OAuth2. A Google account with no user isn't created here:
+     * it gets a short-lived signup token instead, to pass to signUpUser once the user accepts the terms
      *
      * @param googleAuthCode The authorization code from Google's OAuth2 auth-code flow
-     * @returns The logged-in user, the JWT for their session, whether this is a new user (created), and whether a
-     *   soft-deleted account was restored (restored)
+     * @returns The session, or termsRequired with a signup token for a new user
+     * @throws {MicroserviceError} UNAUTHENTICATED if the code is invalid, INVALID_ARGUMENT if the Google profile lacks
+     *   a name or email, ALREADY_EXISTS if another account uses the email, UNAVAILABLE if Google fails
      */
-    signInUser(googleAuthCode: string): Promise<{ user: User; jwt: string; created: boolean; restored: boolean }>;
+    signInUser(googleAuthCode: string): Promise<SignInResult>;
+
+    /**
+     * Creates the user for a signup token from signInUser, recording that they accepted the terms
+     *
+     * @param signupToken The signup token from signInUser
+     * @param acceptedTermsVersion The version of the Terms of Service and Privacy Policy the user accepted
+     * @returns The new user's session
+     * @throws {MicroserviceError} UNAUTHENTICATED if the signup token is invalid or expired, INVALID_ARGUMENT if the
+     *   accepted version isn't the current one, ALREADY_EXISTS if another account uses the email
+     */
+    signUpUser(signupToken: string, acceptedTermsVersion: string): Promise<Session>;
 
     /**
      * Validates a users JWT (ensures it is not expired/revoked). The returned user is built from the JWT claims, so it

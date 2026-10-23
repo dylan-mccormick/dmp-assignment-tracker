@@ -38,12 +38,23 @@ export interface SignInUserRequest {
   googleAuthCode: string;
 }
 
+/**
+ * Either a session (user + jwt), or, for a Google account with no user yet, terms_required + a signup_token to pass to
+ * SignUpUser once the terms are accepted
+ */
 export interface SignInUserResponse {
   user: User | undefined;
   jwt: string;
   created: boolean;
   /** a soft-deleted account was restored by signing in */
   restored: boolean;
+  termsRequired: boolean;
+  signupToken: string;
+}
+
+export interface SignUpUserRequest {
+  signupToken: string;
+  acceptedTermsVersion: string;
 }
 
 export interface SoftValidateJwtRequest {
@@ -384,7 +395,7 @@ export const SignInUserRequest: MessageFns<SignInUserRequest> = {
 };
 
 function createBaseSignInUserResponse(): SignInUserResponse {
-  return { user: undefined, jwt: "", created: false, restored: false };
+  return { user: undefined, jwt: "", created: false, restored: false, termsRequired: false, signupToken: "" };
 }
 
 export const SignInUserResponse: MessageFns<SignInUserResponse> = {
@@ -400,6 +411,12 @@ export const SignInUserResponse: MessageFns<SignInUserResponse> = {
     }
     if (message.restored !== false) {
       writer.uint32(32).bool(message.restored);
+    }
+    if (message.termsRequired !== false) {
+      writer.uint32(40).bool(message.termsRequired);
+    }
+    if (message.signupToken !== "") {
+      writer.uint32(50).string(message.signupToken);
     }
     return writer;
   },
@@ -449,6 +466,22 @@ export const SignInUserResponse: MessageFns<SignInUserResponse> = {
             message.restored = reader.bool();
             continue;
           }
+          case 5: {
+            if (tag !== 40) {
+              break;
+            }
+
+            message.termsRequired = reader.bool();
+            continue;
+          }
+          case 6: {
+            if (tag !== 50) {
+              break;
+            }
+
+            message.signupToken = reader.string();
+            continue;
+          }
         }
         if ((tag & 7) === 4 || tag === 0) {
           break;
@@ -467,6 +500,16 @@ export const SignInUserResponse: MessageFns<SignInUserResponse> = {
       jwt: isSet(object.jwt) ? globalThis.String(object.jwt) : "",
       created: isSet(object.created) ? globalThis.Boolean(object.created) : false,
       restored: isSet(object.restored) ? globalThis.Boolean(object.restored) : false,
+      termsRequired: isSet(object.termsRequired)
+        ? globalThis.Boolean(object.termsRequired)
+        : isSet(object.terms_required)
+        ? globalThis.Boolean(object.terms_required)
+        : false,
+      signupToken: isSet(object.signupToken)
+        ? globalThis.String(object.signupToken)
+        : isSet(object.signup_token)
+        ? globalThis.String(object.signup_token)
+        : "",
     };
   },
 
@@ -484,6 +527,12 @@ export const SignInUserResponse: MessageFns<SignInUserResponse> = {
     if (message.restored !== false) {
       obj.restored = message.restored;
     }
+    if (message.termsRequired !== false) {
+      obj.termsRequired = message.termsRequired;
+    }
+    if (message.signupToken !== "") {
+      obj.signupToken = message.signupToken;
+    }
     return obj;
   },
 
@@ -496,6 +545,101 @@ export const SignInUserResponse: MessageFns<SignInUserResponse> = {
     message.jwt = object.jwt ?? "";
     message.created = object.created ?? false;
     message.restored = object.restored ?? false;
+    message.termsRequired = object.termsRequired ?? false;
+    message.signupToken = object.signupToken ?? "";
+    return message;
+  },
+};
+
+function createBaseSignUpUserRequest(): SignUpUserRequest {
+  return { signupToken: "", acceptedTermsVersion: "" };
+}
+
+export const SignUpUserRequest: MessageFns<SignUpUserRequest> = {
+  encode(message: SignUpUserRequest, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.signupToken !== "") {
+      writer.uint32(10).string(message.signupToken);
+    }
+    if (message.acceptedTermsVersion !== "") {
+      writer.uint32(18).string(message.acceptedTermsVersion);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): SignUpUserRequest {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const previousRecursionDepth = (reader as any).__tsProtoDecodeDepth ?? 0;
+    if (previousRecursionDepth >= 100) {
+      throw new globalThis.Error("protobuf decode recursion limit exceeded");
+    }
+    (reader as any).__tsProtoDecodeDepth = previousRecursionDepth + 1;
+    try {
+      const end = length === undefined ? reader.len : reader.pos + length;
+      const message = createBaseSignUpUserRequest();
+      while (reader.pos < end) {
+        const tag = reader.uint32();
+        switch (tag >>> 3) {
+          case 1: {
+            if (tag !== 10) {
+              break;
+            }
+
+            message.signupToken = reader.string();
+            continue;
+          }
+          case 2: {
+            if (tag !== 18) {
+              break;
+            }
+
+            message.acceptedTermsVersion = reader.string();
+            continue;
+          }
+        }
+        if ((tag & 7) === 4 || tag === 0) {
+          break;
+        }
+        reader.skip(tag & 7);
+      }
+      return message;
+    } finally {
+      (reader as any).__tsProtoDecodeDepth = previousRecursionDepth;
+    }
+  },
+
+  fromJSON(object: any): SignUpUserRequest {
+    return {
+      signupToken: isSet(object.signupToken)
+        ? globalThis.String(object.signupToken)
+        : isSet(object.signup_token)
+        ? globalThis.String(object.signup_token)
+        : "",
+      acceptedTermsVersion: isSet(object.acceptedTermsVersion)
+        ? globalThis.String(object.acceptedTermsVersion)
+        : isSet(object.accepted_terms_version)
+        ? globalThis.String(object.accepted_terms_version)
+        : "",
+    };
+  },
+
+  toJSON(message: SignUpUserRequest): unknown {
+    const obj: any = {};
+    if (message.signupToken !== "") {
+      obj.signupToken = message.signupToken;
+    }
+    if (message.acceptedTermsVersion !== "") {
+      obj.acceptedTermsVersion = message.acceptedTermsVersion;
+    }
+    return obj;
+  },
+
+  create<I extends Exact<DeepPartial<SignUpUserRequest>, I>>(base?: I): SignUpUserRequest {
+    return SignUpUserRequest.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<SignUpUserRequest>, I>>(object: I): SignUpUserRequest {
+    const message = createBaseSignUpUserRequest();
+    message.signupToken = object.signupToken ?? "";
+    message.acceptedTermsVersion = object.acceptedTermsVersion ?? "";
     return message;
   },
 };
@@ -1089,6 +1233,15 @@ export const AuthenticationServiceService = {
     responseSerialize: (value: SignInUserResponse): Buffer => Buffer.from(SignInUserResponse.encode(value).finish()),
     responseDeserialize: (value: Buffer): SignInUserResponse => SignInUserResponse.decode(value),
   },
+  signUpUser: {
+    path: "/authentication.AuthenticationService/SignUpUser" as const,
+    requestStream: false as const,
+    responseStream: false as const,
+    requestSerialize: (value: SignUpUserRequest): Buffer => Buffer.from(SignUpUserRequest.encode(value).finish()),
+    requestDeserialize: (value: Buffer): SignUpUserRequest => SignUpUserRequest.decode(value),
+    responseSerialize: (value: SignInUserResponse): Buffer => Buffer.from(SignInUserResponse.encode(value).finish()),
+    responseDeserialize: (value: Buffer): SignInUserResponse => SignInUserResponse.decode(value),
+  },
   softValidateJwt: {
     path: "/authentication.AuthenticationService/SoftValidateJwt" as const,
     requestStream: false as const,
@@ -1131,6 +1284,7 @@ export const AuthenticationServiceService = {
 
 export interface AuthenticationServiceServer extends UntypedServiceImplementation {
   signInUser: handleUnaryCall<SignInUserRequest, SignInUserResponse>;
+  signUpUser: handleUnaryCall<SignUpUserRequest, SignInUserResponse>;
   softValidateJwt: handleUnaryCall<SoftValidateJwtRequest, SoftValidateJwtResponse>;
   logOutUser: handleUnaryCall<LogOutUserRequest, LogOutUserResponse>;
   getUser: handleUnaryCall<GetUserRequest, GetUserResponse>;
@@ -1149,6 +1303,21 @@ export interface AuthenticationServiceClient extends Client {
   ): ClientUnaryCall;
   signInUser(
     request: SignInUserRequest,
+    metadata: Metadata,
+    options: Partial<CallOptions>,
+    callback: (error: ServiceError | null, response: SignInUserResponse) => void,
+  ): ClientUnaryCall;
+  signUpUser(
+    request: SignUpUserRequest,
+    callback: (error: ServiceError | null, response: SignInUserResponse) => void,
+  ): ClientUnaryCall;
+  signUpUser(
+    request: SignUpUserRequest,
+    metadata: Metadata,
+    callback: (error: ServiceError | null, response: SignInUserResponse) => void,
+  ): ClientUnaryCall;
+  signUpUser(
+    request: SignUpUserRequest,
     metadata: Metadata,
     options: Partial<CallOptions>,
     callback: (error: ServiceError | null, response: SignInUserResponse) => void,

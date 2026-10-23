@@ -8,10 +8,18 @@ import { sign, verify } from "jsonwebtoken";
 import { MicroserviceError } from "../error/MicroserviceError";
 import { User } from "../generated/authentication";
 import { AuthRepository } from "../repository/AuthRepository";
-import { AuthService } from "./AuthService";
+import { AuthService, Session, SignInResult } from "./AuthService";
 
 const JWT_TTL = "7d";
 const JWT_ALGORITHM = "HS256";
+
+// The current Terms of Service / Privacy Policy version, which must match the frontend's TERMS_VERSION (legal.ts)
+const TERMS_VERSION = "2026-10-22";
+
+// Signup tokens carry a Google profile between sign-in and accepting the terms. Their audience keeps them from being
+// accepted as session JWTs (which have none)
+const SIGNUP_TOKEN_TTL = "15m";
+const SIGNUP_TOKEN_AUDIENCE = "signup";
 
 // Claims embedded in every JWT, enough to identify the user without a database lookup
 interface JwtClaims {
@@ -20,6 +28,15 @@ interface JwtClaims {
     name: string;
     avatarUrl: string;
     tokenVersion: number;
+    aud?: unknown;
+}
+
+// Claims in a signup token: the verified Google profile of a user who hasn't accepted the terms yet
+interface SignupTokenClaims {
+    googleId: string;
+    email: string;
+    name: string;
+    avatarUrl?: string;
 }
 
 const requireEnv = (name: string): string => {
@@ -40,11 +57,56 @@ export class AuthServiceImpl implements AuthService {
         this.repository = repository;
     }
 
-    async signInUser(
-        googleAuthCode: string
-    ): Promise<{ user: User; jwt: string; created: boolean; restored: boolean }> {
-        const jwtSecret = requireEnv("JWT_SECRET");
+    async signInUser(googleAuthCode: string): Promise<SignInResult> {
+        const profile = await this.getGoogleProfile(googleAuthCode);
+        const { googleId, ...props } = profile;
 
+        // Refresh an existing user's profile from Google (never creates one)
+        const existing = await this.repository.updateUserByGoogleId(googleId, props);
+        if (existing) return { termsRequired: false, ...this.startSession(existing.user, false, existing.restored) };
+
+        // A new user must accept the terms first: hand back the verified profile, signed, for signUpUser
+        const signupToken = sign(profile satisfies SignupTokenClaims, requireEnv("JWT_SECRET"), {
+            algorithm: JWT_ALGORITHM,
+            expiresIn: SIGNUP_TOKEN_TTL,
+            audience: SIGNUP_TOKEN_AUDIENCE
+        });
+        return { termsRequired: true, signupToken };
+    }
+
+    async signUpUser(signupToken: string, acceptedTermsVersion: string): Promise<Session> {
+        let profile: SignupTokenClaims;
+        try {
+            profile = verify(signupToken, requireEnv("JWT_SECRET"), {
+                algorithms: [JWT_ALGORITHM],
+                audience: SIGNUP_TOKEN_AUDIENCE
+            }) as SignupTokenClaims;
+        } catch (error) {
+            throw new MicroserviceError(
+                status.UNAUTHENTICATED,
+                "Your sign up has expired. Please sign in with Google again.",
+                "Signup token is invalid or expired.",
+                error
+            );
+        }
+
+        if (acceptedTermsVersion !== TERMS_VERSION)
+            throw new MicroserviceError(
+                status.INVALID_ARGUMENT,
+                "The Terms of Service and Privacy Policy have been updated. Please reload the page and review them.",
+                `Accepted terms version ${acceptedTermsVersion} is not the current version ${TERMS_VERSION}.`
+            );
+
+        const { user, created, restored } = await this.repository.upsertUserByGoogleId(
+            profile.googleId,
+            { email: profile.email, name: profile.name, avatarUrl: profile.avatarUrl },
+            TERMS_VERSION
+        );
+        return this.startSession(user, created, restored);
+    }
+
+    // Exchanges a Google auth code for the user's Google profile
+    private async getGoogleProfile(googleAuthCode: string): Promise<SignupTokenClaims> {
         // Connect OAuth2 ("postmessage" is the redirect URI for codes from the popup auth-code flow)
         const oauth2Client = new google.auth.OAuth2(
             requireEnv("GOOGLE_CLIENT_ID"),
@@ -90,13 +152,16 @@ export class AuthServiceImpl implements AuthService {
             );
         }
 
-        // Create the user, or refresh their profile from Google if they already exist
-        const { user, created, restored } = await this.repository.upsertUserByGoogleId(profile.id, {
+        return {
+            googleId: profile.id,
             email: profile.email,
             name: profile.name,
             avatarUrl: profile.picture ?? undefined
-        });
+        };
+    }
 
+    // Issues a session JWT for the user
+    private startSession(user: User, created: boolean, restored: boolean): Session {
         const claims: JwtClaims = {
             sub: user.id,
             email: user.email,
@@ -104,7 +169,7 @@ export class AuthServiceImpl implements AuthService {
             avatarUrl: user.avatarUrl,
             tokenVersion: user.tokenVersion
         };
-        const jwt = sign(claims, jwtSecret, { algorithm: JWT_ALGORITHM, expiresIn: JWT_TTL });
+        const jwt = sign(claims, requireEnv("JWT_SECRET"), { algorithm: JWT_ALGORITHM, expiresIn: JWT_TTL });
 
         return { user, jwt, created, restored };
     }
@@ -118,6 +183,9 @@ export class AuthServiceImpl implements AuthService {
         } catch {
             return { user: undefined, valid: false };
         }
+
+        // session JWTs have no audience, so this rejects signup tokens
+        if (claims.aud !== undefined) return { user: undefined, valid: false };
 
         // verify the token version matches (revoked on logout/deletion)
         try {

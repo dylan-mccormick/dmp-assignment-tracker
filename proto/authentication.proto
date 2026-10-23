@@ -19,11 +19,20 @@ message SignInUserRequest {
     string google_auth_code = 1;
 }
 
+// Either a session (user + jwt), or, for a Google account with no user yet, terms_required + a signup_token to pass to
+// SignUpUser once the terms are accepted
 message SignInUserResponse {
     User user = 1;
     string jwt = 3;
     bool created = 2;
     bool restored = 4; // a soft-deleted account was restored by signing in
+    bool terms_required = 5;
+    string signup_token = 6;
+}
+
+message SignUpUserRequest {
+    string signup_token = 1;
+    string accepted_terms_version = 2;
 }
 
 message SoftValidateJwtRequest {
@@ -61,6 +70,7 @@ message DeleteUserResponse {
 
 service AuthenticationService {
     rpc SignInUser (SignInUserRequest) returns (SignInUserResponse);
+    rpc SignUpUser (SignUpUserRequest) returns (SignInUserResponse);
     rpc SoftValidateJwt (SoftValidateJwtRequest) returns (SoftValidateJwtResponse);
     rpc LogOutUser (LogOutUserRequest) returns (LogOutUserResponse);
     rpc GetUser (GetUserRequest) returns (GetUserResponse);

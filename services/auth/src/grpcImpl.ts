@@ -5,7 +5,7 @@ import { sendUnaryData, status } from "@grpc/grpc-js";
 
 import { MicroserviceError } from "./error/MicroserviceError";
 import { AuthenticationServiceServer } from "./generated/authentication";
-import { AuthService } from "./service/AuthService";
+import { AuthService, Session } from "./service/AuthService";
 
 const handleMicroserviceError = (err: unknown, callback: sendUnaryData<any>) => {
     console.error(err);
@@ -15,13 +15,34 @@ const handleMicroserviceError = (err: unknown, callback: sendUnaryData<any>) => 
     callback({ name: "Error", message: details, code, details });
 };
 
+const NO_SESSION = { user: undefined, jwt: "", created: false, restored: false };
+
+const toSessionResponse = ({ user, jwt, created, restored }: Session) => ({ user, jwt, created, restored });
+
 const grpcImpl = (authService: AuthService): AuthenticationServiceServer => {
     return {
         signInUser(call, callback) {
             const { googleAuthCode } = call.request;
             authService
                 .signInUser(googleAuthCode)
-                .then(({ user, jwt, created, restored }) => callback(null, { user, jwt, created, restored }))
+                .then(result =>
+                    callback(
+                        null,
+                        result.termsRequired
+                            ? { ...NO_SESSION, termsRequired: true, signupToken: result.signupToken }
+                            : { ...toSessionResponse(result), termsRequired: false, signupToken: "" }
+                    )
+                )
+                .catch(err => handleMicroserviceError(err, callback));
+        },
+
+        signUpUser(call, callback) {
+            const { signupToken, acceptedTermsVersion } = call.request;
+            authService
+                .signUpUser(signupToken, acceptedTermsVersion)
+                .then(session =>
+                    callback(null, { ...toSessionResponse(session), termsRequired: false, signupToken: "" })
+                )
                 .catch(err => handleMicroserviceError(err, callback));
         },
 

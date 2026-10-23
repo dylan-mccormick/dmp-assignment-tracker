@@ -23,7 +23,9 @@ import Classes from "./pages/Classes";
 import Dashboard from "./pages/Dashboard";
 import Login from "./pages/Login";
 import PageNotFound from "./pages/PageNotFound";
+import Privacy from "./pages/Privacy";
 import Semesters from "./pages/Semesters";
+import Terms from "./pages/Terms";
 
 const App = () => {
     return (
@@ -45,6 +47,14 @@ const App = () => {
                         <Route
                             path="/login"
                             element={<Login />}
+                        />
+                        <Route
+                            path="/terms"
+                            element={<Terms />}
+                        />
+                        <Route
+                            path="/privacy"
+                            element={<Privacy />}
                         />
                         <Route
                             path="/"

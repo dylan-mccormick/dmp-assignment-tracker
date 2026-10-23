@@ -14,6 +14,7 @@ const unary = unaryFor(client);
 
 const authService = {
     signInUser: unary(client.signInUser),
+    signUpUser: unary(client.signUpUser),
     softValidateJwt: unary(client.softValidateJwt),
     logOutUser: unary(client.logOutUser),
     getUser: unary(client.getUser),
