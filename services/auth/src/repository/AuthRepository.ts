@@ -54,23 +54,36 @@ export interface AuthRepository {
     getUserByEmail(email: string): Promise<User | undefined>;
 
     /**
-     * Refreshes an existing user's profile from Google. Never creates a user, since a new account must first accept the
-     * terms (see upsertUserByGoogleId). A soft-deleted user signing in again is restored (for now, at any time; a
-     * 30-day grace period followed by a permanent purge is planned).
+     * Whether any user, including a soft-deleted one, has the google id
+     *
+     * @param googleId The google id to look up
+     * @returns True if a user row exists
+     * @throws {MicroserviceError} If the database fails
+     */
+    userExistsByGoogleId(googleId: string): Promise<boolean>;
+
+    /**
+     * Refreshes the profile of an existing user who has accepted the given terms version. Never creates a user, and
+     * leaves one who hasn't accepted it untouched, since they must accept first (see upsertUserByGoogleId). A
+     * soft-deleted user signing in again is restored (for now, at any time; a 30-day grace period followed by a
+     * permanent purge is planned).
      *
      * @param googleId The google id of the user
      * @param props The user's current Google profile
-     * @returns The user and whether a soft-deleted account was restored, or undefined if no user has this google id
+     * @param termsVersion The current Terms of Service and Privacy Policy version
+     * @returns The user and whether a soft-deleted account was restored, or undefined if no user has this google id or
+     *   they haven't accepted termsVersion
      * @throws {MicroserviceError} ALREADY_EXISTS if another account uses the email, INTERNAL if the database fails
      */
     updateUserByGoogleId(
         googleId: string,
-        props: GoogleProfileProps
+        props: GoogleProfileProps,
+        termsVersion: string
     ): Promise<{ user: User; restored: boolean } | undefined>;
 
     /**
-     * Creates the user for a Google account that has accepted the terms, or refreshes their profile if they already
-     * exist (e.g. signed up in another tab). A soft-deleted user is restored
+     * Records that a Google account accepted the terms: creates its user, or refreshes an existing user's profile and
+     * accepted terms version. A soft-deleted user is restored
      *
      * @param googleId The google id of the user
      * @param props The user's current Google profile

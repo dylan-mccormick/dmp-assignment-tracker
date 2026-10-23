@@ -11,27 +11,31 @@ export interface Session {
     restored: boolean; // a soft-deleted account was restored
 }
 
-// Signing in either starts a session, or, for a Google account with no user yet, requires the terms to be accepted first
-export type SignInResult = ({ termsRequired: false } & Session) | { termsRequired: true; signupToken: string };
+// Signing in either starts a session, or, for a user who hasn't accepted the current terms (including a Google account
+// with no user yet), requires them to be accepted first
+export type SignInResult =
+    | ({ termsRequired: false } & Session)
+    | { termsRequired: true; signupToken: string; existingUser: boolean };
 
 export interface AuthService {
     /**
-     * Signs in an existing user via the Google auth code from OAuth2. A Google account with no user isn't created here:
-     * it gets a short-lived signup token instead, to pass to signUpUser once the user accepts the terms
+     * Signs in an existing user who has accepted the current terms via the Google auth code from OAuth2. Anyone else (a
+     * Google account with no user, or a user who hasn't accepted the current version) gets a short-lived signup token
+     * instead, to pass to signUpUser once they accept the terms
      *
      * @param googleAuthCode The authorization code from Google's OAuth2 auth-code flow
-     * @returns The session, or termsRequired with a signup token for a new user
+     * @returns The session, or termsRequired with a signup token and whether the user already has an account
      * @throws {MicroserviceError} UNAUTHENTICATED if the code is invalid, INVALID_ARGUMENT if the Google profile lacks
      *   a name or email, ALREADY_EXISTS if another account uses the email, UNAVAILABLE if Google fails
      */
     signInUser(googleAuthCode: string): Promise<SignInResult>;
 
     /**
-     * Creates the user for a signup token from signInUser, recording that they accepted the terms
+     * Records that the user for a signup token from signInUser accepted the terms, creating them if they're new
      *
      * @param signupToken The signup token from signInUser
      * @param acceptedTermsVersion The version of the Terms of Service and Privacy Policy the user accepted
-     * @returns The new user's session
+     * @returns The user's session
      * @throws {MicroserviceError} UNAUTHENTICATED if the signup token is invalid or expired, INVALID_ARGUMENT if the
      *   accepted version isn't the current one, ALREADY_EXISTS if another account uses the email
      */

@@ -110,9 +110,24 @@ export class AuthRepositoryImpl implements AuthRepository {
         return tokenVersion;
     }
 
+    async userExistsByGoogleId(googleId: string): Promise<boolean> {
+        try {
+            const result = await this.pool.query("SELECT 1 FROM users WHERE google_id = $1", [googleId]);
+            return result.rows.length > 0;
+        } catch (error) {
+            throw new MicroserviceError(
+                status.INTERNAL,
+                "Unknown internal error.",
+                "Failed to check whether a user exists by google ID due to database error.",
+                error
+            );
+        }
+    }
+
     async updateUserByGoogleId(
         googleId: string,
-        props: GoogleProfileProps
+        props: GoogleProfileProps,
+        termsVersion: string
     ): Promise<{ user: User; restored: boolean } | undefined> {
         try {
             // `previous` is read before the update, since RETURNING only sees the new values
@@ -124,9 +139,9 @@ export class AuthRepositoryImpl implements AuthRepository {
                     deleted_at = NULL,
                     updated_at = NOW()
                 FROM (SELECT id, deleted_at FROM users WHERE google_id = $1) AS previous
-                WHERE users.id = previous.id
+                WHERE users.id = previous.id AND users.terms_version = $5
                 RETURNING users.*, previous.deleted_at IS NOT NULL AS restored`,
-                [googleId, props.email, props.name, props.avatarUrl ?? null]
+                [googleId, props.email, props.name, props.avatarUrl ?? null, termsVersion]
             );
 
             if (!result.rows[0]) return undefined;
@@ -157,8 +172,7 @@ export class AuthRepositoryImpl implements AuthRepository {
         const newId = uuidv7();
 
         try {
-            // `previous` reads the row as it was before this statement, since RETURNING only sees the new values. An
-            // existing user keeps the terms version they first accepted
+            // `previous` reads the row as it was before this statement, since RETURNING only sees the new values
             const result = await this.pool.query(
                 `WITH previous AS (SELECT deleted_at FROM users WHERE google_id = $2)
                 INSERT INTO users (id, google_id, email, name, avatar_url, terms_version, terms_accepted_at)
@@ -167,8 +181,8 @@ export class AuthRepositoryImpl implements AuthRepository {
                     email = EXCLUDED.email,
                     name = EXCLUDED.name,
                     avatar_url = EXCLUDED.avatar_url,
-                    terms_version = COALESCE(users.terms_version, EXCLUDED.terms_version),
-                    terms_accepted_at = COALESCE(users.terms_accepted_at, EXCLUDED.terms_accepted_at),
+                    terms_version = EXCLUDED.terms_version,
+                    terms_accepted_at = EXCLUDED.terms_accepted_at,
                     deleted_at = NULL,
                     updated_at = NOW()
                 RETURNING *, COALESCE((SELECT deleted_at IS NOT NULL FROM previous), FALSE) AS restored`,
