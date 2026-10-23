@@ -8,6 +8,9 @@ CREATE TABLE IF NOT EXISTS users (
     name TEXT NOT NULL,
     avatar_url TEXT,
     token_version INT NOT NULL DEFAULT 0,
+    -- the Terms of Service / Privacy Policy version accepted at sign-up (NULL for accounts created before the terms)
+    terms_version TEXT,
+    terms_accepted_at TIMESTAMPTZ,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     deleted_at TIMESTAMPTZ

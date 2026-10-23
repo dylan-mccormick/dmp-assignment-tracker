@@ -54,18 +54,34 @@ export interface AuthRepository {
     getUserByEmail(email: string): Promise<User | undefined>;
 
     /**
-     * Creates the user for a Google account, or refreshes their profile if they already exist. A soft-deleted user
-     * signing in again is restored (for now, at any time; a 30-day grace period followed by a permanent purge is
-     * planned).
+     * Refreshes an existing user's profile from Google. Never creates a user, since a new account must first accept the
+     * terms (see upsertUserByGoogleId). A soft-deleted user signing in again is restored (for now, at any time; a
+     * 30-day grace period followed by a permanent purge is planned).
      *
      * @param googleId The google id of the user
      * @param props The user's current Google profile
+     * @returns The user and whether a soft-deleted account was restored, or undefined if no user has this google id
+     * @throws {MicroserviceError} ALREADY_EXISTS if another account uses the email, INTERNAL if the database fails
+     */
+    updateUserByGoogleId(
+        googleId: string,
+        props: GoogleProfileProps
+    ): Promise<{ user: User; restored: boolean } | undefined>;
+
+    /**
+     * Creates the user for a Google account that has accepted the terms, or refreshes their profile if they already
+     * exist (e.g. signed up in another tab). A soft-deleted user is restored
+     *
+     * @param googleId The google id of the user
+     * @param props The user's current Google profile
+     * @param termsVersion The version of the Terms of Service and Privacy Policy the user accepted
      * @returns The user, whether they were newly created, and whether a soft-deleted account was restored
      * @throws {MicroserviceError} ALREADY_EXISTS if another account uses the email, INTERNAL if the database fails
      */
     upsertUserByGoogleId(
         googleId: string,
-        props: GoogleProfileProps
+        props: GoogleProfileProps,
+        termsVersion: string
     ): Promise<{ user: User; created: boolean; restored: boolean }>;
 
     /**

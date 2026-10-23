@@ -3,6 +3,7 @@
 // main content area (the `main` landmark, which navigation and the skip link move focus to)
 
 import { type MouseEvent, useContext } from "react";
+import { Link } from "react-router";
 
 import { NavbarContext } from "../context/NavbarContext";
 import StandardHeader from "./StandardHeader";
@@ -67,8 +68,22 @@ const StandardLayout = ({ title, sidebar, children }: StandardLayoutProps) => {
                         {children}
                     </main>
 
-                    <footer className="w-full h-16 border-t border-gray-300 flex items-center justify-center px-4 pt-4 mt-4 text-sm text-gray-600">
+                    <footer className="w-full min-h-16 border-t border-gray-300 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 px-4 pt-4 mt-4 text-sm text-gray-600">
                         <p>&copy; 2026 Dylan McCormick. All rights reserved.</p>
+                        <nav
+                            aria-label="Legal"
+                            className="flex gap-4">
+                            <Link
+                                to="/terms"
+                                className="underline hover:text-gray-900">
+                                Terms of Service
+                            </Link>
+                            <Link
+                                to="/privacy"
+                                className="underline hover:text-gray-900">
+                                Privacy Policy
+                            </Link>
+                        </nav>
                     </footer>
                 </div>
             </div>
