@@ -22,8 +22,11 @@ interface SessionResponse {
     restored: boolean;
 }
 
-// A new Google account gets a signup token instead of a session, until the terms are accepted
-type SignInResponse = (SessionResponse & { termsRequired: false }) | { termsRequired: true; signupToken: string };
+// A user who hasn't accepted the current terms (including a new one) gets a signup token instead of a session, until
+// they accept
+type SignInResponse =
+    | (SessionResponse & { termsRequired: false })
+    | { termsRequired: true; signupToken: string; existingUser: boolean };
 
 // A legal document link, opened in a new tab so the pending sign up isn't lost
 const LegalLink = ({ to, children }: { to: string; children: string }) => (
@@ -48,14 +51,15 @@ const Login = () => {
 
     // State
     const [signupToken, setSignupToken] = useState<string>();
+    const [existingUser, setExistingUser] = useState(false); // the terms step is for an existing account, not a new one
     const [acceptedTerms, setAcceptedTerms] = useState(false);
 
     // Ref
-    const createAccountHeadingRef = useRef<HTMLHeadingElement>(null);
+    const termsHeadingRef = useRef<HTMLHeadingElement>(null);
 
     // Move focus to the terms step when it replaces the sign in button, so it's announced
     useEffect(() => {
-        if (signupToken) createAccountHeadingRef.current?.focus();
+        if (signupToken) termsHeadingRef.current?.focus();
     }, [signupToken]);
 
     // Stores the session and goes to the dashboard
@@ -95,6 +99,7 @@ const Login = () => {
             const result = body as SignInResponse;
             if (result.termsRequired) {
                 setAcceptedTerms(false);
+                setExistingUser(result.existingUser);
                 setSignupToken(result.signupToken);
                 return;
             }
@@ -107,10 +112,14 @@ const Login = () => {
         }
     };
 
-    // Creates the account once the terms are accepted
+    // Records the acceptance (creating the account if it's new), then signs in
     const signUp = async (token: string) => {
         setBanner(undefined);
-        showModal({ type: "buttonless", title: "Creating account...", loadingSpinner: true });
+        showModal({
+            type: "buttonless",
+            title: existingUser ? "Signing in..." : "Creating account...",
+            loadingSpinner: true
+        });
 
         try {
             const res = await apiFetch("/auth/signup", {
@@ -124,7 +133,11 @@ const Login = () => {
                 if (res.status === 401) setSignupToken(undefined);
                 setBanner({
                     level: "error",
-                    message: body?.error ?? "Could not create your account. Please try again."
+                    message:
+                        body?.error ??
+                        (existingUser
+                            ? "Sign in failed. Please try again."
+                            : "Could not create your account. Please try again.")
                 });
                 return;
             }
@@ -179,14 +192,15 @@ const Login = () => {
                     {signupToken ? (
                         <>
                             <h1
-                                ref={createAccountHeadingRef}
+                                ref={termsHeadingRef}
                                 tabIndex={-1}
                                 className="text-3xl font-extralight mb-4 outline-none">
-                                Create your account
+                                {existingUser ? "Review our terms" : "Create your account"}
                             </h1>
                             <p className="max-w-md text-center text-gray-600 mb-6">
-                                Before we create your account, please review and accept the Terms of Service and Privacy
-                                Policy.
+                                {existingUser
+                                    ? "Before you continue, please review and accept the Terms of Service and Privacy Policy."
+                                    : "Before we create your account, please review and accept the Terms of Service and Privacy Policy."}
                             </p>
                             <label className="flex items-start gap-2 cursor-pointer max-w-md mb-6">
                                 <input
@@ -205,7 +219,7 @@ const Login = () => {
                                 <PrimaryButton
                                     disabled={!acceptedTerms}
                                     onClick={() => signUp(signupToken)}>
-                                    Create Account
+                                    {existingUser ? "Continue" : "Create Account"}
                                 </PrimaryButton>
                             </div>
                         </>

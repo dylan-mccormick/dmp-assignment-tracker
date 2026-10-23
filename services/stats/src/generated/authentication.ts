@@ -39,8 +39,8 @@ export interface SignInUserRequest {
 }
 
 /**
- * Either a session (user + jwt), or, for a Google account with no user yet, terms_required + a signup_token to pass to
- * SignUpUser once the terms are accepted
+ * Either a session (user + jwt), or, for a user who hasn't accepted the current terms (including a Google account with
+ * no user yet), terms_required + a signup_token to pass to SignUpUser once they accept
  */
 export interface SignInUserResponse {
   user: User | undefined;
@@ -50,6 +50,8 @@ export interface SignInUserResponse {
   restored: boolean;
   termsRequired: boolean;
   signupToken: string;
+  /** with terms_required: the user already has an account (possibly soft-deleted) */
+  existingUser: boolean;
 }
 
 export interface SignUpUserRequest {
@@ -395,7 +397,15 @@ export const SignInUserRequest: MessageFns<SignInUserRequest> = {
 };
 
 function createBaseSignInUserResponse(): SignInUserResponse {
-  return { user: undefined, jwt: "", created: false, restored: false, termsRequired: false, signupToken: "" };
+  return {
+    user: undefined,
+    jwt: "",
+    created: false,
+    restored: false,
+    termsRequired: false,
+    signupToken: "",
+    existingUser: false,
+  };
 }
 
 export const SignInUserResponse: MessageFns<SignInUserResponse> = {
@@ -417,6 +427,9 @@ export const SignInUserResponse: MessageFns<SignInUserResponse> = {
     }
     if (message.signupToken !== "") {
       writer.uint32(50).string(message.signupToken);
+    }
+    if (message.existingUser !== false) {
+      writer.uint32(56).bool(message.existingUser);
     }
     return writer;
   },
@@ -482,6 +495,14 @@ export const SignInUserResponse: MessageFns<SignInUserResponse> = {
             message.signupToken = reader.string();
             continue;
           }
+          case 7: {
+            if (tag !== 56) {
+              break;
+            }
+
+            message.existingUser = reader.bool();
+            continue;
+          }
         }
         if ((tag & 7) === 4 || tag === 0) {
           break;
@@ -510,6 +531,11 @@ export const SignInUserResponse: MessageFns<SignInUserResponse> = {
         : isSet(object.signup_token)
         ? globalThis.String(object.signup_token)
         : "",
+      existingUser: isSet(object.existingUser)
+        ? globalThis.Boolean(object.existingUser)
+        : isSet(object.existing_user)
+        ? globalThis.Boolean(object.existing_user)
+        : false,
     };
   },
 
@@ -533,6 +559,9 @@ export const SignInUserResponse: MessageFns<SignInUserResponse> = {
     if (message.signupToken !== "") {
       obj.signupToken = message.signupToken;
     }
+    if (message.existingUser !== false) {
+      obj.existingUser = message.existingUser;
+    }
     return obj;
   },
 
@@ -547,6 +576,7 @@ export const SignInUserResponse: MessageFns<SignInUserResponse> = {
     message.restored = object.restored ?? false;
     message.termsRequired = object.termsRequired ?? false;
     message.signupToken = object.signupToken ?? "";
+    message.existingUser = object.existingUser ?? false;
     return message;
   },
 };

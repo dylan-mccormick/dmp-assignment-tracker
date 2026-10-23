@@ -12,22 +12,25 @@ import requireAuth, { getAuthUser } from "../middleware/requireAuth";
 const toPublicUser = ({ id, email, name, avatarUrl }: User) => ({ id, email, name, avatarUrl });
 
 const authRoutes = (router: Router) => {
-    // Exchanges a Google auth code (from the frontend's auth-code flow) for a session JWT. A Google account with no user
-    // yet gets { termsRequired, signupToken } instead, to send to /signup once the user accepts the terms
+    // Exchanges a Google auth code (from the frontend's auth-code flow) for a session JWT. A user who hasn't accepted the
+    // current terms (including a new one) gets { termsRequired, signupToken, existingUser } instead, to send to /signup
+    // once they accept
     router.post("/google", async (req, res) => {
         const code = req.body?.code;
         if (typeof code !== "string" || !code) throw new HttpError(400, "A Google auth code is required.");
 
-        const { user, jwt, created, restored, termsRequired, signupToken } = await authService.signInUser({
-            googleAuthCode: code
-        });
-        if (termsRequired) return res.json({ termsRequired, signupToken });
+        const { user, jwt, created, restored, termsRequired, signupToken, existingUser } = await authService.signInUser(
+            {
+                googleAuthCode: code
+            }
+        );
+        if (termsRequired) return res.json({ termsRequired, signupToken, existingUser });
         if (!user) throw new Error("Auth service returned no user on sign in.");
 
         res.json({ user: toPublicUser(user), jwt, created, restored, termsRequired });
     });
 
-    // Creates the account for a signup token from /google, once the user has accepted the terms
+    // Records that the user for a signup token from /google accepted the terms, creating their account if they're new
     router.post("/signup", async (req, res) => {
         const signupToken = req.body?.signupToken;
         const acceptedTermsVersion = req.body?.acceptedTermsVersion;

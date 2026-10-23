@@ -19,8 +19,8 @@ message SignInUserRequest {
     string google_auth_code = 1;
 }
 
-// Either a session (user + jwt), or, for a Google account with no user yet, terms_required + a signup_token to pass to
-// SignUpUser once the terms are accepted
+// Either a session (user + jwt), or, for a user who hasn't accepted the current terms (including a Google account with
+// no user yet), terms_required + a signup_token to pass to SignUpUser once they accept
 message SignInUserResponse {
     User user = 1;
     string jwt = 3;
@@ -28,6 +28,7 @@ message SignInUserResponse {
     bool restored = 4; // a soft-deleted account was restored by signing in
     bool terms_required = 5;
     string signup_token = 6;
+    bool existing_user = 7; // with terms_required: the user already has an account (possibly soft-deleted)
 }
 
 message SignUpUserRequest {

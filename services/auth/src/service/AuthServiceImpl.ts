@@ -61,17 +61,18 @@ export class AuthServiceImpl implements AuthService {
         const profile = await this.getGoogleProfile(googleAuthCode);
         const { googleId, ...props } = profile;
 
-        // Refresh an existing user's profile from Google (never creates one)
-        const existing = await this.repository.updateUserByGoogleId(googleId, props);
+        // Refresh the profile of an existing user who has accepted the current terms (never creates one)
+        const existing = await this.repository.updateUserByGoogleId(googleId, props, TERMS_VERSION);
         if (existing) return { termsRequired: false, ...this.startSession(existing.user, false, existing.restored) };
 
-        // A new user must accept the terms first: hand back the verified profile, signed, for signUpUser
+        // Anyone else must accept the terms first: hand back the verified profile, signed, for signUpUser
         const signupToken = sign(profile satisfies SignupTokenClaims, requireEnv("JWT_SECRET"), {
             algorithm: JWT_ALGORITHM,
             expiresIn: SIGNUP_TOKEN_TTL,
             audience: SIGNUP_TOKEN_AUDIENCE
         });
-        return { termsRequired: true, signupToken };
+        const existingUser = await this.repository.userExistsByGoogleId(googleId);
+        return { termsRequired: true, signupToken, existingUser };
     }
 
     async signUpUser(signupToken: string, acceptedTermsVersion: string): Promise<Session> {

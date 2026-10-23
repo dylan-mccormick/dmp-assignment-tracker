@@ -16,6 +16,7 @@ const handleMicroserviceError = (err: unknown, callback: sendUnaryData<any>) => 
 };
 
 const NO_SESSION = { user: undefined, jwt: "", created: false, restored: false };
+const NO_SIGNUP = { termsRequired: false, signupToken: "", existingUser: false };
 
 const toSessionResponse = ({ user, jwt, created, restored }: Session) => ({ user, jwt, created, restored });
 
@@ -29,8 +30,13 @@ const grpcImpl = (authService: AuthService): AuthenticationServiceServer => {
                     callback(
                         null,
                         result.termsRequired
-                            ? { ...NO_SESSION, termsRequired: true, signupToken: result.signupToken }
-                            : { ...toSessionResponse(result), termsRequired: false, signupToken: "" }
+                            ? {
+                                  ...NO_SESSION,
+                                  termsRequired: true,
+                                  signupToken: result.signupToken,
+                                  existingUser: result.existingUser
+                              }
+                            : { ...toSessionResponse(result), ...NO_SIGNUP }
                     )
                 )
                 .catch(err => handleMicroserviceError(err, callback));
@@ -40,9 +46,7 @@ const grpcImpl = (authService: AuthService): AuthenticationServiceServer => {
             const { signupToken, acceptedTermsVersion } = call.request;
             authService
                 .signUpUser(signupToken, acceptedTermsVersion)
-                .then(session =>
-                    callback(null, { ...toSessionResponse(session), termsRequired: false, signupToken: "" })
-                )
+                .then(session => callback(null, { ...toSessionResponse(session), ...NO_SIGNUP }))
                 .catch(err => handleMicroserviceError(err, callback));
         },
 
