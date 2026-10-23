@@ -8,6 +8,5 @@ export const TERMS_VERSION = "2026-10-22";
 // Shown as the documents' effective date
 export const LEGAL_EFFECTIVE_DATE = "October 22, 2026";
 
-// TODO: replace with a real address before shipping: the documents tell users to write here for questions and
-// permanent deletion requests
-export const LEGAL_CONTACT_EMAIL = "privacy@example.com";
+// Where the documents tell users to write for questions and permanent deletion requests
+export const LEGAL_CONTACT_EMAIL = "privacy@mnmzc.dev";
