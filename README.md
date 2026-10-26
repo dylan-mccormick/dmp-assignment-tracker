@@ -1,5 +1,7 @@
 # DMP Assignment Tracker
 
+![DMP Assignment Tracker cover](images/cover.png)
+
 A personal assignment tracker for semesters, classes, and assignments, with a dashboard that shows semester progress, what's due this week, and what's overdue.
 
 It's mainly a **distributed-systems learning project**. It's deliberately over-engineered for what it does, so it can use microservices, gRPC, a message queue, cache-aside caching, and a CQRS-style read model.
